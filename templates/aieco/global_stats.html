@@ -1,0 +1,190 @@
+{% extends "aieco/base.html" %}
+{% block title %}Global AI Carbon Impact — AI ECO{% endblock %}
+{% block page_id %}global{% endblock %}
+
+{% block content %}
+<div style="margin-top:28px;text-align:center;margin-bottom:36px">
+  <div class="badge" style="margin-bottom:14px">
+    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:4px;animation:pulse 1.4s infinite"></span>
+    Live estimates — updates every second
+  </div>
+  <h1 class="h1" style="font-size:clamp(28px,5vw,52px)">Global AI <span style="color:var(--accent)">Carbon Impact</span></h1>
+  <p class="muted" style="max-width:520px;margin:10px auto 0">Based on publicly reported query volumes and research-based energy-per-token estimates from Samsi et al. (2023) and Patterson et al. (2021).</p>
+</div>
+
+<!-- Live tickers -->
+<div class="metric-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:28px">
+  <div class="metric" style="border-top:2px solid var(--accent);position:relative;overflow:hidden">
+    <div class="metric-label">Queries today</div>
+    <div class="metric-value" id="g-queries" style="font-size:26px">—</div>
+    <div class="metric-unit">all major AI models</div>
+  </div>
+  <div class="metric" style="border-top:2px solid #f472b6">
+    <div class="metric-label">CO₂ today</div>
+    <div class="metric-value" id="g-co2today" style="font-size:26px">—</div>
+    <div class="metric-unit" id="g-co2unit">kg so far</div>
+  </div>
+  <div class="metric" style="border-top:2px solid #60a5fa">
+    <div class="metric-label">Energy today</div>
+    <div class="metric-value" id="g-energy" style="font-size:26px">—</div>
+    <div class="metric-unit">MWh consumed</div>
+  </div>
+  <div class="metric" style="border-top:2px solid #fbbf24">
+    <div class="metric-label">This week's CO₂</div>
+    <div class="metric-value" id="g-weekco2" style="font-size:26px">—</div>
+    <div class="metric-unit" id="g-weekunit">tonnes</div>
+  </div>
+</div>
+
+<!-- Your platform contribution -->
+{% if platform_sessions %}
+<div style="background:var(--glow);border:0.5px solid var(--accent);border-radius:10px;padding:12px 18px;font-size:13px;color:var(--accent);display:flex;align-items:center;gap:10px;margin-bottom:24px">
+  <span style="font-size:18px">◈</span>
+  <span>AI ECO platform: <strong>{{ platform_sessions }}</strong> sessions logged by <strong>{{ platform_users }}</strong> users, totalling <strong>{{ platform_co2_g }}g CO₂</strong> tracked.</span>
+</div>
+{% endif %}
+
+<!-- Weekly model breakdown -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+  <h2 class="h2" style="margin:0">Weekly breakdown by model</h2>
+  <div style="display:flex;gap:4px;padding:3px;background:var(--surface);border:0.5px solid var(--border);border-radius:9px">
+    <button class="btn btn-sm btn-primary" id="btn-week"  onclick="setView('week',this)">Weekly</button>
+    <button class="btn btn-sm"             id="btn-day"   onclick="setView('day',this)">Daily</button>
+    <button class="btn btn-sm"             id="btn-year"  onclick="setView('year',this)">Yearly</button>
+  </div>
+</div>
+
+<div class="table-wrap" style="margin-bottom:28px">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>AI Model</th>
+        <th style="text-align:right">Queries</th>
+        <th style="text-align:right">Avg tokens</th>
+        <th style="text-align:right">Energy (MWh)</th>
+        <th>CO₂</th>
+        <th style="min-width:120px">Share</th>
+      </tr>
+    </thead>
+    <tbody id="g-rows"></tbody>
+  </table>
+</div>
+
+<!-- Context cards -->
+<h2 class="h2">Weekly CO₂ in context</h2>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px" id="g-context"></div>
+
+<!-- Assumptions -->
+<div style="background:rgba(227,160,67,.05);border:0.5px solid rgba(227,160,67,.25);border-radius:12px;padding:16px 18px;font-size:12.5px;color:var(--muted);line-height:1.7">
+  <strong style="color:var(--warn)">📌 Methodology & sources</strong>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+    <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px">Query volumes from <span style="color:var(--accent)">public company reports & analyst estimates (2024–2025)</span></div>
+    <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px">Avg prompt: <span style="color:var(--accent)">~150 tokens</span> · Avg response: <span style="color:var(--accent)">~300 tokens</span> = 450/query</div>
+    <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px">Energy per token: <span style="color:var(--accent)">Samsi et al. (2023), Patterson et al. (2021)</span></div>
+    <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px">Global carbon intensity: <span style="color:var(--accent)">0.45 kg CO₂/kWh</span> (IEA 2024) + PUE factor 1.4×</div>
+  </div>
+</div>
+
+<style>
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const G_MODELS=[
+  {name:'GPT-4o / OpenAI',   icon:'🟢', qd:2500000000, wh:0.0000030, col:'#3fb884'},
+  {name:'Google Gemini',      icon:'🔵', qd:1000000000, wh:0.0000020, col:'#60a5fa'},
+  {name:'Meta AI (LLaMA)',    icon:'🟣', qd:500000000,  wh:0.0000060, col:'#a78bfa'},
+  {name:'Microsoft Copilot',  icon:'🔷', qd:400000000,  wh:0.0000035, col:'#38bdf8'},
+  {name:'Claude (Anthropic)', icon:'🟠', qd:100000000,  wh:0.0000025, col:'#fb923c'},
+  {name:'Mistral / Others',   icon:'⚪', qd:200000000,  wh:0.0000040, col:'#94a3b8'},
+];
+const AVG_TOK=450,CI=0.45,PUE=1.4;
+G_MODELS.forEach(m=>{
+  m.whq=m.wh*AVG_TOK*PUE;
+  m.kwhd=(m.qd*m.whq)/1000;
+  m.co2d=m.kwhd*CI;
+});
+const TOT={qd:G_MODELS.reduce((s,m)=>s+m.qd,0),co2d:G_MODELS.reduce((s,m)=>s+m.co2d,0),kwhd:G_MODELS.reduce((s,m)=>s+m.kwhd,0)};
+
+let gView='week';
+function setView(v,el){
+  gView=v;
+  document.querySelectorAll('[id^="btn-"]').forEach(b=>{b.classList.remove('btn-primary');b.classList.add('btn-sm');});
+  el.classList.add('btn-primary');
+  renderTable();
+}
+
+function fmtBig(n){if(n>=1e12)return(n/1e12).toFixed(2)+'T';if(n>=1e9)return(n/1e9).toFixed(2)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'k';return n.toFixed(1);}
+function fmtCO2(kg){if(kg>=1e6)return[(kg/1e6).toFixed(2),'kt CO₂'];if(kg>=1000)return[(kg/1000).toFixed(2),'t CO₂'];return[kg.toFixed(1),'kg CO₂'];}
+
+function renderTable(){
+  const m=gView==='day'?1:gView==='week'?7:365;
+  const tco2=TOT.co2d*m, tkwh=TOT.kwhd*m;
+  document.getElementById('g-rows').innerHTML=G_MODELS.map(md=>{
+    const co2=md.co2d*m, kwh=md.kwhd*m, q=md.qd*m, sh=(co2/tco2)*100;
+    const[cv,cu]=fmtCO2(co2);
+    const pillCls=sh>35?'pill-high':sh>15?'pill-medium':'pill-low';
+    return`<tr>
+      <td style="font-weight:500">${md.icon} ${md.name}</td>
+      <td style="text-align:right;font-family:'Syne',sans-serif;color:var(--accent)">${fmtBig(q)}</td>
+      <td style="text-align:right;color:var(--muted)">${AVG_TOK}</td>
+      <td style="text-align:right;font-family:'Syne',sans-serif">${(kwh/1000).toLocaleString(undefined,{maximumFractionDigits:0})} MWh</td>
+      <td><span class="pill ${pillCls}">${cv} ${cu}</span></td>
+      <td>
+        <span style="font-size:12px;color:var(--muted)">${sh.toFixed(1)}%</span>
+        <div style="height:5px;background:var(--surface2);border-radius:99px;margin-top:3px;overflow:hidden">
+          <div style="height:5px;border-radius:99px;background:${md.col};width:${sh}%"></div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('')+`<tr style="background:var(--surface2);border-top:0.5px solid var(--border2)">
+    <td style="font-family:'Syne',sans-serif;font-weight:700">🌍 Total</td>
+    <td style="text-align:right;font-family:'Syne',sans-serif;color:var(--accent)">${fmtBig(TOT.qd*m)}</td>
+    <td style="color:var(--muted)">${AVG_TOK}</td>
+    <td style="text-align:right;font-family:'Syne',sans-serif">${(tkwh/1000).toLocaleString(undefined,{maximumFractionDigits:0})} MWh</td>
+    <td><span class="pill pill-high">${fmtCO2(tco2)[0]} ${fmtCO2(tco2)[1]}</span></td>
+    <td style="font-family:'Syne',sans-serif;font-weight:700">100%</td>
+  </tr>`;
+}
+
+function renderContext(){
+  const wco2=TOT.co2d*7, wkwh=TOT.kwhd*7;
+  const items=[
+    {icon:'✈️',title:'Transatlantic flights',desc:`<strong style="color:var(--accent)">${fmtBig(wco2/990)}</strong> London→New York returns (≈990 kg CO₂)`},
+    {icon:'🚗',title:'Car journeys',desc:`<strong style="color:var(--accent)">${fmtBig(wco2/0.21)}</strong> km driven (0.21 kg CO₂/km)`},
+    {icon:'🌳',title:'Trees for one year',desc:`<strong style="color:var(--accent)">${fmtBig(wco2/21)}</strong> trees needed to absorb this CO₂`},
+    {icon:'🏠',title:'UK homes (annual)',desc:`Energy of <strong style="color:var(--accent)">${fmtBig((wkwh*52)/3900)}</strong> average UK homes per year`},
+    {icon:'📱',title:'Smartphone charges',desc:`Same as charging <strong style="color:var(--accent)">${fmtBig(wkwh*1000/8.22)}</strong> phones`},
+    {icon:'⚡',title:'Coal power stations',desc:`Output of <strong style="color:var(--accent)">${((wkwh*1000)/(500000*168)).toFixed(1)}</strong> 500MW coal plants all week`},
+  ];
+  document.getElementById('g-context').innerHTML=items.map(c=>`
+    <div class="card" style="display:flex;align-items:flex-start;gap:12px;padding:16px">
+      <span style="font-size:24px;flex-shrink:0">${c.icon}</span>
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:3px">${c.title}</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5">${c.desc}</div>
+      </div>
+    </div>`).join('');
+}
+
+function updateTickers(){
+  const now=new Date(), sod=new Date(now); sod.setHours(0,0,0,0);
+  const frac=(now-sod)/86400000;
+  const q=Math.floor(TOT.qd*frac), co2=TOT.co2d*frac, kwh=TOT.kwhd*frac;
+  const[dcv,dcu]=fmtCO2(co2),[wcv,wcu]=fmtCO2(TOT.co2d*7);
+  document.getElementById('g-queries').textContent=q.toLocaleString();
+  document.getElementById('g-co2today').textContent=dcv;
+  document.getElementById('g-co2unit').textContent=dcu+' so far';
+  document.getElementById('g-energy').textContent=(kwh/1000).toLocaleString(undefined,{maximumFractionDigits:0});
+  document.getElementById('g-weekco2').textContent=wcv;
+  document.getElementById('g-weekunit').textContent=wcu;
+}
+
+renderTable();
+renderContext();
+updateTickers();
+setInterval(updateTickers,1000);
+</script>
+{% endblock %}

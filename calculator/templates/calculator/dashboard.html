@@ -1,0 +1,117 @@
+<!-- # This file is part of AI ECO. # -->
+<!-- dashboard.html — personal emissions dashboard, aggregates prompt_emissions via ORM -->
+{% extends 'calculator/base.html' %}
+{% block title %}Dashboard — AIECO{% endblock %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:48px 24px 100px;position:relative;z-index:1;">
+
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:36px;">
+    <div>
+      <div class="hero-pill" style="margin-bottom:12px;"><span class="hero-pill-dot"></span>Personal tracker</div>
+      <h1 style="font-size:clamp(24px,4vw,40px);font-weight:900;letter-spacing:-1px;margin-bottom:6px;">
+        Your <span class="grad">Carbon</span> Dashboard
+      </h1>
+      <p style="font-size:14px;color:var(--muted);">Track and compare your AI emissions over time</p>
+    </div>
+    <a href="{% url 'calculate' %}" class="calc-btn" style="width:auto;padding:11px 24px;">New session</a>
+  </div>
+
+  <!-- Budget exceeded warning banner -->
+  {% if over_budget %}
+  <div style="background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.35);border-radius:14px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+    <div>
+      <div style="font-weight:800;font-size:14px;color:#f87171;margin-bottom:2px;">Monthly budget exceeded</div>
+      <div style="font-size:13px;color:var(--muted);">You have used {{ pct_used }}% of your {{ budget }}g monthly CO2 budget. Consider switching to a lower-carbon model or region.</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Summary stat cards -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px;">
+    <div class="glass-panel">
+      <div class="panel-body" style="text-align:center;padding:20px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">Total CO2 this month</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:var(--accent);">{{ total_co2|floatformat:4 }}g</div>
+        {% if budget %}<div style="font-size:12px;color:var(--muted);margin-top:4px;">{{ pct_used }}% of {{ budget }}g budget</div>{% endif %}
+      </div>
+    </div>
+    <div class="glass-panel">
+      <div class="panel-body" style="text-align:center;padding:20px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">Sessions logged</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:var(--accent);">{{ sessions|length }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">prompt sessions</div>
+      </div>
+    </div>
+    {% if model_stats %}
+    <div class="glass-panel">
+      <div class="panel-body" style="text-align:center;padding:20px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;">Most used model</div>
+        <div style="font-size:16px;font-weight:800;color:var(--text);margin-top:8px;">{{ model_stats.0.ai_model__model_name }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">{{ model_stats.0.count }} session{{ model_stats.0.count|pluralize }}</div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Budget progress bar -->
+  {% if budget %}
+  <div class="glass-panel" style="margin-bottom:20px;">
+    <div class="panel-body">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-size:13px;font-weight:700;color:var(--text);">Monthly CO2 budget</span>
+        <span style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--muted);">{{ total_co2|floatformat:4 }}g / {{ budget }}g</span>
+      </div>
+      <div style="height:8px;background:var(--glass);border-radius:99px;overflow:hidden;">
+        <div style="height:100%;width:{{ pct_used }}%;max-width:100%;
+          background:{% if pct_used > 90 %}linear-gradient(90deg,#7c3aed,#e53e3e){% else %}linear-gradient(90deg,var(--btn-from),var(--btn-to)){% endif %};
+          border-radius:99px;transition:width .5s;"></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Recent sessions list -->
+  <div class="glass-panel">
+    <div class="panel-head">
+      <div class="panel-head-icon">S</div>
+      <div>
+        <h2>Recent sessions</h2>
+        <p>Your last {{ sessions|length }} prompt calculations</p>
+      </div>
+    </div>
+    <div class="panel-body">
+      {% if sessions %}
+        {% for s in sessions %}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;
+          border-bottom:1px solid var(--glass-border);flex-wrap:wrap;gap:8px;
+          {% if forloop.last %}border-bottom:none;{% endif %}">
+          <div style="flex:1;min-width:0;">
+            <a href="{% url 'session_detail' s.pk %}"
+               style="font-size:14px;font-weight:700;color:var(--text);display:block;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              {{ s.title|default:"Untitled session" }}
+            </a>
+            <div style="font-size:12px;color:var(--muted);">
+              {{ s.ai_model.model_name }} · {{ s.region.region_name }} · {{ s.created_at|date:"d M Y" }}
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--accent);">
+              {% if s.emissions %}{{ s.emissions.co2_mg|floatformat:4 }} mg{% else %}—{% endif %}
+            </div>
+            <div style="font-size:11px;color:var(--muted);">CO2e</div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-orb">—</div>
+          <div class="empty-title">No sessions yet</div>
+          <div class="empty-sub">Log your first prompt to start tracking</div>
+          <a href="{% url 'calculate' %}" class="calc-btn" style="width:auto;padding:10px 22px;display:inline-block;margin-top:12px;font-size:13px;">Log first session</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

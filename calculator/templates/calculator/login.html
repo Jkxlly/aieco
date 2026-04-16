@@ -1,0 +1,40 @@
+<!-- # This file is part of AI ECO. # -->
+<!-- login.html — user authentication page -->
+{% extends 'calculator/base.html' %}
+{% block title %}Login — AIECO{% endblock %}
+{% block content %}
+<div style="min-height:80vh;display:flex;align-items:center;justify-content:center;padding:40px 24px;position:relative;z-index:1;">
+  <div style="width:100%;max-width:420px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <div class="hero-pill" style="margin-bottom:14px;"><span class="hero-pill-dot"></span>Welcome back</div>
+      <h1 style="font-size:32px;font-weight:900;letter-spacing:-1px;margin-bottom:8px;">Sign in to <span class="grad">AIECO</span></h1>
+      <p style="font-size:14px;color:var(--muted);">Track your AI carbon footprint</p>
+    </div>
+    <div class="glass-panel">
+      <div class="panel-body">
+        <form method="post">
+          {% csrf_token %}
+          {% if form.errors %}
+          <div style="background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#f87171;">
+            Invalid username or password. Please try again.
+          </div>
+          {% endif %}
+          <div class="field">
+            <label class="field-label">Username</label>
+            <input type="text" name="username" placeholder="Your username" autocomplete="username" autofocus>
+          </div>
+          <div class="field">
+            <label class="field-label">Password</label>
+            <input type="password" name="password" placeholder="Your password" autocomplete="current-password">
+          </div>
+          <button type="submit" class="calc-btn" style="margin-top:8px;">Sign in</button>
+        </form>
+        <div style="text-align:center;margin-top:20px;font-size:13px;color:var(--muted);">
+          Don't have an account?
+          <a href="{% url 'register' %}" style="color:var(--accent);font-weight:700;margin-left:4px;">Sign up free</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

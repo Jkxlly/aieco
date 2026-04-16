@@ -1,0 +1,51 @@
+{% extends "aieco/base.html" %}
+{% block title %}Edit Session #{{ session.id }} — AI ECO{% endblock %}
+{% block page_id %}session{% endblock %}
+
+{% block content %}
+<div style="max-width:680px;margin-top:28px">
+  <h1 class="h1">Edit Session #{{ session.id }}</h1>
+  <p class="muted">Emissions will be recalculated automatically when you save.</p>
+  {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+
+  <div class="card">
+    <form method="post">
+      {% csrf_token %}
+
+      <label for="title">Title</label>
+      <input class="input" id="title" type="text" name="title" value="{{ session.title }}" required>
+
+      <label for="prompt_text">Prompt text</label>
+      <textarea class="input" id="prompt_text" name="prompt_text" rows="7" required>{{ session.prompt_text }}</textarea>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:4px">
+        <div>
+          <label for="model">Model</label>
+          <select class="input" id="model" name="model">
+            {% for v,l in model_choices %}
+              <option value="{{ v }}" {% if session.model == v %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="region">Region</label>
+          <select class="input" id="region" name="region">
+            {% for v,l in region_choices %}
+              <option value="{{ v }}" {% if session.region == v %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="notes">Notes</label>
+          <input class="input" id="notes" type="text" name="notes" value="{{ session.notes }}">
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:20px">
+        <button class="btn btn-primary" type="submit">Save &amp; recalculate</button>
+        <a class="btn" href="{% url 'session_detail' session.id %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

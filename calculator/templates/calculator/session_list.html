@@ -1,0 +1,59 @@
+<!-- # This file is part of AI ECO. # -->
+<!-- session_list.html — lists all prompt sessions for the logged-in user, ordered newest first -->
+{% extends 'calculator/base.html' %}
+{% block title %}Session History — AIECO{% endblock %}
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:48px 24px 100px;position:relative;z-index:1;">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:36px;">
+    <div>
+      <div class="hero-pill" style="margin-bottom:12px;"><span class="hero-pill-dot"></span>Session history</div>
+      <h1 style="font-size:clamp(24px,4vw,40px);font-weight:900;letter-spacing:-1px;">Your <span class="grad">Sessions</span></h1>
+      <p style="font-size:14px;color:var(--muted);margin-top:6px;">All logged prompt calculations</p>
+    </div>
+    <a href="{% url 'calculate' %}" class="calc-btn" style="width:auto;padding:11px 24px;">New session</a>
+  </div>
+
+  {% if sessions %}
+    {% for s in sessions %}
+    <div class="glass-panel" style="margin-bottom:14px;">
+      <div class="panel-body">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:17px;font-weight:800;color:var(--text);margin-bottom:6px;">
+              {{ s.title|default:"Untitled session" }}
+            </div>
+            <div style="font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.5;">
+              {{ s.prompt_text|truncatechars:120 }}
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--muted);">
+              <span style="padding:3px 10px;border-radius:99px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2);color:var(--accent);">{{ s.ai_model.model_name }}</span>
+              <span>{{ s.region.region_name }}</span>
+              <span>{{ s.created_at|date:"d M Y, H:i" }}</span>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            {% if s.emissions %}
+            <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--accent);">{{ s.emissions.co2_mg|floatformat:4 }} mg</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">CO2e</div>
+            {% endif %}
+            <a href="{% url 'session_detail' s.pk %}"
+               style="font-size:12px;font-weight:700;color:var(--accent);padding:5px 14px;border:1px solid rgba(167,139,250,0.3);border-radius:99px;transition:all .2s;"
+               onmouseover="this.style.background='rgba(167,139,250,0.1)'"
+               onmouseout="this.style.background='transparent'">View</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="glass-panel">
+      <div class="empty-state">
+        <div class="empty-orb">—</div>
+        <div class="empty-title">No sessions yet</div>
+        <div class="empty-sub">Log your first prompt to start tracking</div>
+        <a href="{% url 'calculate' %}" class="calc-btn" style="width:auto;padding:10px 22px;display:inline-block;margin-top:12px;font-size:13px;">Log first session</a>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

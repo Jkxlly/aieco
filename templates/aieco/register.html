@@ -1,0 +1,63 @@
+{% extends "aieco/base.html" %}
+{% block title %}Register — AI ECO{% endblock %}
+{% block page_id %}register{% endblock %}
+
+{% block content %}
+<div style="max-width:440px;margin:48px auto">
+  <div style="text-align:center;margin-bottom:24px">
+    <div class="badge" style="margin-bottom:14px">🌿 Join AI ECO</div>
+    <h1 class="h1">Create an account</h1>
+    <p class="muted">Start tracking the environmental impact of your AI usage.</p>
+  </div>
+
+  {% if error %}
+    <div class="alert error">{{ error }}</div>
+  {% endif %}
+
+  <div class="card">
+    <form method="post" data-validate="register">
+      {% csrf_token %}
+
+      <label for="username">Username</label>
+      <input class="input" id="username" type="text" name="username" autocomplete="username" required>
+
+      <label for="email">Email</label>
+      <input class="input" id="email" type="email" name="email" autocomplete="email" required>
+
+      <label for="password1">Password</label>
+      <div class="input-row">
+        <input class="input" id="password1" type="password" name="password1" minlength="8" autocomplete="new-password" required>
+        <button type="button" class="btn btn-sm" data-toggle="password1">Show</button>
+      </div>
+
+      <div class="help" style="margin-top:8px">
+        <div class="strength">
+          <div class="strength-bar" id="pwBar" role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0"></div>
+        </div>
+        <div class="muted" id="pwLabel" style="font-size:12px">Strength: —</div>
+        <ul class="checklist" id="pwChecks">
+          <li data-check="len">At least 8 characters</li>
+          <li data-check="upper">Uppercase letter</li>
+          <li data-check="lower">Lowercase letter</li>
+          <li data-check="num">Contains a number</li>
+        </ul>
+      </div>
+
+      <label for="password2">Confirm password</label>
+      <div class="input-row">
+        <input class="input" id="password2" type="password" name="password2" minlength="8" autocomplete="new-password" required>
+        <button type="button" class="btn btn-sm" data-toggle="password2">Show</button>
+      </div>
+      <div class="muted" id="matchMsg" aria-live="polite" style="font-size:12.5px;margin-top:4px"></div>
+
+      <div class="actions" style="margin-top:20px">
+        <button class="btn btn-primary btn-full" type="submit">Create account →</button>
+      </div>
+    </form>
+  </div>
+
+  <p style="text-align:center;font-size:13px;color:var(--muted);margin-top:14px">
+    Already have an account? <a class="link" href="{% url 'login' %}">Login</a>
+  </p>
+</div>
+{% endblock %}

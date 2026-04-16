@@ -1,0 +1,85 @@
+{% extends "aieco/base.html" %}
+{% block title %}Sessions — AI ECO{% endblock %}
+{% block page_id %}session{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-top:28px">
+  <div>
+    <h1 class="h1">Prompt Sessions</h1>
+    <p class="muted">Every AI prompt you've logged with its calculated emissions.</p>
+  </div>
+  <a class="btn btn-primary" href="{% url 'session_create' %}">+ Log prompt</a>
+</div>
+
+<form method="get" class="card">
+  <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px">
+    <div>
+      <label>Search</label>
+      <input class="input" name="q" value="{{ q }}" placeholder="Title or prompt text…">
+    </div>
+    <div>
+      <label>Model</label>
+      <select class="input" name="model">
+        <option value="">All models</option>
+        {% for v,l in model_choices %}
+          <option value="{{ v }}" {% if model == v %}selected{% endif %}>{{ l }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Impact</label>
+      <select class="input" name="impact">
+        <option value="">All</option>
+        <option value="low"    {% if impact == "low"    %}selected{% endif %}>Low (&lt;100 mg)</option>
+        <option value="medium" {% if impact == "medium" %}selected{% endif %}>Medium</option>
+        <option value="high"   {% if impact == "high"   %}selected{% endif %}>High (&gt;1000 mg)</option>
+      </select>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center">
+    <label style="margin:0">Sort</label>
+    <select class="input" name="sort" style="min-width:180px">
+      <option value="-created_at" {% if sort == "-created_at" %}selected{% endif %}>Newest first</option>
+      <option value="created_at"  {% if sort == "created_at"  %}selected{% endif %}>Oldest first</option>
+      <option value="-co2_mg"     {% if sort == "-co2_mg"     %}selected{% endif %}>Highest CO₂</option>
+      <option value="co2_mg"      {% if sort == "co2_mg"      %}selected{% endif %}>Lowest CO₂</option>
+      <option value="-energy_wh"  {% if sort == "-energy_wh"  %}selected{% endif %}>Most energy</option>
+    </select>
+    <button class="btn btn-primary" type="submit">Apply</button>
+    <a class="btn" href="{% url 'session_list' %}">Reset</a>
+    <a class="btn" href="{% url 'sessions_by_model' %}" style="margin-left:auto">Grouped by model</a>
+    <a class="btn" href="{% url 'budget_dashboard' %}">Budget report</a>
+  </div>
+</form>
+
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th><th>Title</th><th>Model</th><th>Tokens</th>
+        <th>Energy (Wh)</th><th>CO₂</th><th>Date</th>
+        <th style="text-align:right">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sessions %}
+      <tr>
+        <td>#{{ s.id }}</td>
+        <td><a class="link" href="{% url 'session_detail' s.id %}">{{ s.title|truncatechars:40 }}</a></td>
+        <td style="font-size:12px;color:var(--muted)">{{ s.model_display }}</td>
+        <td>{{ s.token_count }}</td>
+        <td>{{ s.energy_wh|floatformat:4 }}</td>
+        <td><span class="pill pill-{{ s.impact_level }}">{{ s.co2_mg|floatformat:2 }} mg</span></td>
+        <td style="font-size:12px;color:var(--muted)">{{ s.created_at|date:"d M Y H:i" }}</td>
+        <td style="text-align:right;white-space:nowrap">
+          <a class="btn btn-sm" href="{% url 'session_detail' s.id %}">View</a>
+          <a class="btn btn-sm" href="{% url 'session_edit' s.id %}">Edit</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" style="color:var(--muted)">No sessions found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

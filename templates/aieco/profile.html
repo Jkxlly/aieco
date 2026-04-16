@@ -1,0 +1,47 @@
+{% extends "aieco/base.html" %}
+{% block title %}Profile — AI ECO{% endblock %}
+{% block page_id %}profile{% endblock %}
+
+{% block content %}
+<div style="margin-top:28px;max-width:600px">
+  <h1 class="h1">My Profile</h1>
+  <p class="muted">Update your details and monthly CO₂ budget.</p>
+
+  {% if profile.profile_picture %}
+    <img class="profile-pic" src="{{ profile.profile_picture.url }}" alt="Profile picture">
+  {% endif %}
+
+  {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+
+  <div class="card">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <label>Profile picture</label>
+      <input class="input" type="file" name="profile_picture" accept="image/*">
+
+      <label for="bio">Bio</label>
+      <textarea class="input" id="bio" name="bio" rows="3" placeholder="Tell the community about your AI usage…">{{ profile.bio }}</textarea>
+
+      <label for="location">Location</label>
+      <input class="input" id="location" type="text" name="location" value="{{ profile.location }}" placeholder="e.g. London, UK">
+
+      <label for="monthly_budget_g">Monthly CO₂ budget (grams)</label>
+      <input class="input" id="monthly_budget_g" type="number" name="monthly_budget_g" value="{{ profile.monthly_budget_g }}" min="0.1" step="0.1">
+      <p style="font-size:12px;color:var(--muted);margin-top:4px">Default: 10g — alerts when you exceed this on the dashboard.</p>
+
+      <div class="actions" style="margin-top:20px">
+        <button class="btn btn-primary" type="submit">Save changes</button>
+        <a class="btn" href="{% url 'dashboard' %}">Back</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3 class="h3">Account</h3>
+    <p style="font-size:13px;color:var(--muted)">Username: <strong style="color:var(--text)">{{ request.user.username }}</strong></p>
+    <p style="font-size:13px;color:var(--muted)">Email: <strong style="color:var(--text)">{{ request.user.email }}</strong></p>
+    <p style="font-size:13px;color:var(--muted)">Member since: <strong style="color:var(--text)">{{ request.user.date_joined|date:"d M Y" }}</strong></p>
+  </div>
+</div>
+{% endblock %}

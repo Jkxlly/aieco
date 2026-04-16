@@ -1,0 +1,56 @@
+{% extends "aieco/base.html" %}
+{% block title %}Hardware Runs — AI ECO{% endblock %}
+{% block page_id %}hardware{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-top:28px">
+  <div>
+    <h1 class="h1">Hardware Runs</h1>
+    <p class="muted">GPU/TPU workload energy and emissions records.</p>
+  </div>
+  <a class="btn btn-primary" href="{% url 'hardware_create' %}">+ New run</a>
+</div>
+
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th><th>Title</th><th>Hardware</th><th>GPUs</th>
+        <th>Hours</th><th>Energy (kWh)</th><th>CO₂ (kg)</th><th>Cost (£)</th>
+        <th>Date</th><th style="text-align:right">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in runs %}
+      <tr>
+        <td>#{{ r.id }}</td>
+        <td style="font-weight:500">{{ r.title|truncatechars:36 }}</td>
+        <td style="font-size:12px;color:var(--muted)">{{ r.get_hardware_display }}</td>
+        <td>{{ r.gpu_count }}</td>
+        <td>{{ r.duration_h }}</td>
+        <td style="font-family:var(--head);font-weight:700">{{ r.energy_kwh|floatformat:2 }}</td>
+        <td>
+          {% if r.co2_kg > 100 %}
+            <span class="pill pill-high">{{ r.co2_kg|floatformat:1 }}</span>
+          {% elif r.co2_kg > 10 %}
+            <span class="pill pill-medium">{{ r.co2_kg|floatformat:2 }}</span>
+          {% else %}
+            <span class="pill pill-low">{{ r.co2_kg|floatformat:3 }}</span>
+          {% endif %}
+        </td>
+        <td>£{{ r.cost_gbp|floatformat:2 }}</td>
+        <td style="font-size:12px;color:var(--muted)">{{ r.created_at|date:"d M Y" }}</td>
+        <td style="text-align:right">
+          <form method="post" action="{% url 'hardware_delete' r.id %}" style="display:inline">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-danger" type="submit" onclick="return confirm('Delete this run?')">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="10" style="color:var(--muted)">No hardware runs yet — <a class="link" href="{% url 'hardware_create' %}">add your first</a>.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

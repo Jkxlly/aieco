@@ -1,0 +1,33 @@
+{% extends "aieco/base.html" %}
+{% block title %}New Post — AI ECO Forum{% endblock %}
+{% block page_id %}forum{% endblock %}
+
+{% block content %}
+<div style="max-width:640px;margin-top:28px">
+  <h1 class="h1">New Forum Post</h1>
+  <p class="muted">Share a result, tip, question, or discussion with the community.</p>
+  {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+
+  <div class="card">
+    <form method="post">
+      {% csrf_token %}
+
+      <label for="title">Post title</label>
+      <input class="input" id="title" type="text" name="title" required placeholder="e.g. Surprised by Claude Haiku's efficiency vs GPT-3.5">
+
+      <label for="body">Body</label>
+      <textarea class="input" id="body" name="body" rows="6" required placeholder="Share your findings, questions, or insights…"></textarea>
+
+      <label for="tag">Tag</label>
+      <select class="input" id="tag" name="tag">
+        {% for v,l in tag_choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
+      </select>
+
+      <div class="actions" style="margin-top:20px">
+        <button class="btn btn-primary" type="submit">Publish post →</button>
+        <a class="btn" href="{% url 'forum_list' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

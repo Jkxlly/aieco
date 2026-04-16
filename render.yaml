@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: aieco
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn aieco.wsgi"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: PYTHON_VERSION
+        value: 3.11.0
+databases:
+  - name: aieco-db
+    databaseName: aieco
+    user: aieco

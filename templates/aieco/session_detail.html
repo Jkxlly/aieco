@@ -1,0 +1,121 @@
+{% extends "aieco/base.html" %}
+{% block title %}Session #{{ session.id }} — AI ECO{% endblock %}
+{% block page_id %}session{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-top:28px">
+  <div>
+    <h1 class="h1" style="margin-bottom:4px">Session #{{ session.id }}</h1>
+    <p class="muted" style="margin:0">Emissions breakdown for this prompt.</p>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{% url 'session_list' %}">← Back</a>
+    <a class="btn" href="{% url 'session_edit' session.id %}">Edit</a>
+    <a class="btn btn-danger" href="{% url 'session_delete' session.id %}">Delete</a>
+  </div>
+</div>
+
+<div class="card" style="margin-top:14px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+    <div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px">Prompt summary</div>
+      <div style="font-family:var(--head);font-size:18px;font-weight:700;line-height:1.25">{{ session.title }}</div>
+    </div>
+    <div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px">Logged</div>
+      <div class="muted">{{ session.created_at|date:"d M Y H:i" }}</div>
+    </div>
+    <div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px">AI Model</div>
+      <div style="color:var(--accent);font-weight:500">{{ session.model_display }}</div>
+    </div>
+    <div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px">Region</div>
+      <div class="muted">{{ session.get_region_display }}</div>
+    </div>
+    <div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px">Token count</div>
+      <div style="font-family:var(--head);font-weight:700">{{ session.token_count }} tokens</div>
+    </div>
+    <div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px">Impact level</div>
+      <span class="pill pill-{{ session.impact_level }}">{{ session.impact_level|title }}</span>
+    </div>
+  </div>
+</div>
+
+<div class="metric-grid">
+  <div class="metric accent">
+    <div class="metric-label">Energy used</div>
+    <div class="metric-value">{{ session.energy_wh|floatformat:4 }}</div>
+    <div class="metric-unit">Wh</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">CO₂ emitted</div>
+    <div class="metric-value">{{ session.co2_mg|floatformat:2 }}</div>
+    <div class="metric-unit">mg CO₂</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">CO₂ in grams</div>
+    <div class="metric-value">{{ session.co2_grams|floatformat:6 }}</div>
+    <div class="metric-unit">g CO₂</div>
+  </div>
+</div>
+
+<h2 class="h2">Real-world equivalents</h2>
+<div class="metric-grid">
+  <div class="metric">
+    <div class="metric-label">Google searches</div>
+    <div class="metric-value" style="font-size:22px">{{ equiv_searches|floatformat:4 }}</div>
+    <div class="metric-unit">at ~0.2g CO₂ each</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">10W LED runtime</div>
+    <div class="metric-value" style="font-size:22px">{{ equiv_led_secs|floatformat:2 }}s</div>
+    <div class="metric-unit">seconds of light</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Phone charge fraction</div>
+    <div class="metric-value" style="font-size:22px">{{ equiv_phone|floatformat:6 }}</div>
+    <div class="metric-unit">of one charge (8.22 Wh)</div>
+  </div>
+</div>
+
+{% if session.prompt_text %}
+<h2 class="h2">Prompt text</h2>
+<div class="card">
+  <div style="font-size:14px;white-space:pre-wrap;line-height:1.7;color:var(--text)">{{ session.prompt_text }}</div>
+</div>
+{% endif %}
+
+{% if session.notes %}
+<h2 class="h2">Notes</h2>
+<div class="card"><div style="font-size:14px;white-space:pre-wrap;color:var(--muted)">{{ session.notes }}</div></div>
+{% endif %}
+
+<h2 class="h2">Comments</h2>
+<div class="card">
+  <form method="post">
+    {% csrf_token %}
+    <label>Add a comment</label>
+    <textarea class="input" name="message" rows="3" placeholder="Add context or observations…" required></textarea>
+    <div class="actions" style="margin-top:10px">
+      <button class="btn btn-primary" type="submit">Post comment</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  {% for c in comments %}
+  <div style="padding:12px 0;border-bottom:0.5px solid var(--border)">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:5px">
+      <strong style="font-size:13px">{{ c.author.username }}</strong>
+      <span style="font-size:11px;color:var(--muted)">{{ c.created_at|date:"d M Y H:i" }}</span>
+    </div>
+    <div style="font-size:13.5px;white-space:pre-wrap;color:var(--text)">{{ c.message }}</div>
+  </div>
+  {% empty %}
+  <p class="muted">No comments yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

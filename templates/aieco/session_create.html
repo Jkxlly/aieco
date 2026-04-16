@@ -1,0 +1,56 @@
+{% extends "aieco/base.html" %}
+{% block title %}Log Session — AI ECO{% endblock %}
+{% block page_id %}session{% endblock %}
+
+{% block content %}
+<div style="max-width:660px;margin-top:28px">
+  <h1 class="h1">Log AI Session</h1>
+  <p class="muted">Enter your prompt — emissions are calculated automatically on save.</p>
+
+  {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+
+  <div class="card">
+    <form method="post">
+      {% csrf_token %}
+
+      <label for="title">Prompt summary / title</label>
+      <input class="input" id="title" type="text" name="title" required placeholder="e.g. Draft marketing email for product launch">
+
+      <label for="prompt_text">
+        Full prompt text
+        <span style="font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:6px">
+          Tokens: <strong id="tokenCount" style="color:var(--accent)">0</strong>
+        </span>
+      </label>
+      <textarea class="input" id="promptText" name="prompt_text" rows="7" required placeholder="Paste your full prompt here. Token count and emissions are estimated from this text."></textarea>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
+        <div>
+          <label for="model">AI Model</label>
+          <select class="input" id="model" name="model">
+            {% for v,l in model_choices %}
+              <option value="{{ v }}" {% if v == 'claude-sonnet' %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="region">Your region</label>
+          <select class="input" id="region" name="region">
+            {% for v,l in region_choices %}
+              <option value="{{ v }}" {% if v == '0.2' %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <label for="notes">Notes <span style="font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0">(optional)</span></label>
+      <textarea class="input" id="notes" name="notes" rows="2" placeholder="Context, purpose, or anything worth noting…"></textarea>
+
+      <div class="actions" style="margin-top:20px">
+        <button class="btn btn-primary" type="submit">Calculate &amp; save →</button>
+        <a class="btn" href="{% url 'session_list' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "aieco/base.html" %}
+{% block title %}Delete Session #{{ session.id }} — AI ECO{% endblock %}
+{% block page_id %}session{% endblock %}
+
+{% block content %}
+<div style="max-width:520px;margin-top:28px">
+  <h1 class="h1" style="margin-bottom:6px">Delete Session #{{ session.id }}</h1>
+  <p class="muted">This action is permanent and cannot be undone.</p>
+
+  <div class="card" style="margin-top:18px;border-color:rgba(240,112,112,.3)">
+    <p class="muted"><strong style="color:var(--text)">Title:</strong> {{ session.title }}</p>
+    <p class="muted"><strong style="color:var(--text)">Model:</strong> {{ session.model_display }}</p>
+    <p class="muted"><strong style="color:var(--text)">Tokens:</strong> {{ session.token_count }}</p>
+    <p class="muted"><strong style="color:var(--text)">Energy:</strong> {{ session.energy_wh|floatformat:4 }} Wh</p>
+    <p class="muted"><strong style="color:var(--text)">CO₂:</strong> {{ session.co2_mg|floatformat:2 }} mg</p>
+    <p class="muted"><strong style="color:var(--text)">Logged:</strong> {{ session.created_at|date:"d M Y H:i" }}</p>
+    <hr style="margin:16px 0;opacity:.2">
+    <form method="post">
+      {% csrf_token %}
+      <div class="actions">
+        <button class="btn btn-danger" type="submit">Yes, delete permanently</button>
+        <a class="btn" href="{% url 'session_detail' session.id %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

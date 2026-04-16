@@ -1,0 +1,50 @@
+{% extends "aieco/base.html" %}
+{% block title %}Sessions by Model — AI ECO{% endblock %}
+{% block page_id %}session{% endblock %}
+
+{% block content %}
+<div style="margin-top:28px">
+  <h1 class="h1">Sessions by Model</h1>
+  <p class="muted">Aggregate emissions grouped by AI model — click a row to filter your session list.</p>
+</div>
+
+<div class="table-wrap" style="margin-top:18px">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>AI Model</th>
+        <th style="text-align:right">Sessions</th>
+        <th style="text-align:right">Total tokens</th>
+        <th style="text-align:right">Total energy (Wh)</th>
+        <th style="text-align:right">Total CO₂ (mg)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for g in groups %}
+      <tr class="click-row" data-url="{% url 'session_list' %}?model={{ g.model }}">
+        <td style="font-weight:500;color:var(--accent)">{{ g.model }}</td>
+        <td style="text-align:right">{{ g.total }}</td>
+        <td style="text-align:right">{{ g.total_tokens|default:"—" }}</td>
+        <td style="text-align:right">{{ g.total_energy|floatformat:4|default:"—" }}</td>
+        <td style="text-align:right">
+          {% if g.total_co2 %}
+            {% if g.total_co2 >= 1000 %}
+              <span class="pill pill-high">{{ g.total_co2|floatformat:0 }}</span>
+            {% else %}
+              <span class="pill pill-low">{{ g.total_co2|floatformat:1 }}</span>
+            {% endif %}
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" style="color:var(--muted)">No sessions yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="actions" style="margin-top:14px">
+  <a class="btn" href="{% url 'session_list' %}">← Back to sessions</a>
+  <a class="btn" href="{% url 'budget_dashboard' %}">Budget report</a>
+</div>
+{% endblock %}

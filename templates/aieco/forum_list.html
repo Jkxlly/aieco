@@ -1,0 +1,98 @@
+{% extends "aieco/base.html" %}
+{% block title %}Forum — AI ECO{% endblock %}
+{% block page_id %}forum{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-top:28px">
+  <div>
+    <h1 class="h1">Community Forum</h1>
+    <p class="muted">Share results, ask questions, and discuss AI sustainability.</p>
+  </div>
+  <div class="actions">
+    {% if request.user.is_authenticated %}
+      <a class="btn btn-primary" href="{% url 'forum_create' %}">+ New post</a>
+    {% else %}
+      <a class="btn btn-primary" href="{% url 'login' %}">Login to post</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Filter bar -->
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+  <a class="btn btn-sm {% if not tag %}btn-primary{% endif %}" href="{% url 'forum_list' %}">All</a>
+  {% for v,l in tag_choices %}
+    <a class="btn btn-sm {% if tag == v %}btn-primary{% endif %}" href="?tag={{ v }}">{{ l }}</a>
+  {% endfor %}
+  <span style="margin-left:auto;font-size:12px;color:var(--muted);align-self:center">{{ total_posts }} post{{ total_posts|pluralize }}</span>
+</div>
+
+<!-- Search -->
+<form method="get" style="margin-bottom:18px;display:flex;gap:8px">
+  {% if tag %}<input type="hidden" name="tag" value="{{ tag }}">{% endif %}
+  <input class="input" name="q" value="{{ search }}" placeholder="Search posts…" style="max-width:360px">
+  <button class="btn btn-primary" type="submit">Search</button>
+  {% if search %}<a class="btn" href="{% url 'forum_list' %}{% if tag %}?tag={{ tag }}{% endif %}">Clear</a>{% endif %}
+</form>
+
+{% for post in posts %}
+<div class="card" style="margin-bottom:12px">
+  <!-- Post header -->
+  <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px">
+    <div style="width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--head);font-size:13px;font-weight:700;color:#0b0f1a;flex-shrink:0">
+      {{ post.author.username|slice:":2"|upper }}
+    </div>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:500">{{ post.author.username }}</div>
+      <div style="font-size:11px;color:var(--muted)">{{ post.created_at|timesince }} ago</div>
+    </div>
+    <span class="tag tag-{{ post.tag }}">{{ post.get_tag_display }}</span>
+  </div>
+
+  <h3 style="font-family:var(--head);font-size:16px;font-weight:700;margin-bottom:8px;line-height:1.3">{{ post.title }}</h3>
+  <p style="font-size:13.5px;color:var(--muted);line-height:1.6;margin-bottom:12px">{{ post.body|truncatechars:300 }}</p>
+
+  <!-- Likes + comments -->
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+    {% if request.user.is_authenticated %}
+      <form method="post" action="{% url 'forum_like' post.id %}" style="display:inline">
+        {% csrf_token %}
+        <button class="btn btn-sm" type="submit" style="color:var(--accent)">♥ {{ post.likes }}</button>
+      </form>
+    {% else %}
+      <span style="font-size:12.5px;color:var(--muted)">♥ {{ post.likes }}</span>
+    {% endif %}
+    <span style="font-size:12.5px;color:var(--muted)">💬 {{ post.comments.count }} comment{{ post.comments.count|pluralize }}</span>
+  </div>
+
+  <!-- Comments -->
+  {% if post.comments.all %}
+  <div style="margin-top:14px;border-top:0.5px solid var(--border);padding-top:12px">
+    {% for c in post.comments.all|slice:":3" %}
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <div style="width:26px;height:26px;border-radius:50%;background:var(--surface2);border:0.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">
+        {{ c.author.username|slice:":2"|upper }}
+      </div>
+      <div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:9px;padding:8px 12px;flex:1">
+        <div style="font-size:12px;font-weight:500;margin-bottom:3px">{{ c.author.username }} <span style="color:var(--muted);font-weight:400">· {{ c.created_at|timesince }} ago</span></div>
+        <div style="font-size:13px;color:var(--muted)">{{ c.text }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Add comment -->
+  {% if request.user.is_authenticated %}
+  <form method="post" action="{% url 'forum_comment' post.id %}" style="display:flex;gap:8px;margin-top:12px">
+    {% csrf_token %}
+    <input class="input" name="text" placeholder="Add a comment…" style="flex:1;min-width:0">
+    <button class="btn btn-primary btn-sm" type="submit">↑</button>
+  </form>
+  {% endif %}
+</div>
+{% empty %}
+<div class="card" style="text-align:center;padding:48px;color:var(--muted)">
+  No posts yet. {% if request.user.is_authenticated %}<a class="link" href="{% url 'forum_create' %}">Be the first to post!</a>{% endif %}
+</div>
+{% endfor %}
+{% endblock %}

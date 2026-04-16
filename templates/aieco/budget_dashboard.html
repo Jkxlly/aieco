@@ -1,0 +1,58 @@
+{% extends "aieco/base.html" %}
+{% block title %}Budget Report — AI ECO{% endblock %}
+{% block page_id %}session{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-top:28px">
+  <div>
+    <h1 class="h1">Budget Report</h1>
+    <p class="muted">Your sessions by impact level and model breakdown.</p>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{% url 'session_list' %}">← Sessions</a>
+    <a class="btn" href="{% url 'sessions_by_model' %}">By model</a>
+  </div>
+</div>
+
+<div class="metric-grid">
+  <div class="metric accent">
+    <div class="metric-label">Total sessions</div>
+    <div class="metric-value">{{ total }}</div>
+  </div>
+  <div class="metric">
+    <div class="metric-label">Low impact</div>
+    <div class="metric-value">{{ low_count }}</div>
+    <div class="metric-unit">&lt;100 mg CO₂</div>
+  </div>
+  <div class="metric warn">
+    <div class="metric-label">Medium impact</div>
+    <div class="metric-value">{{ medium_count }}</div>
+    <div class="metric-unit">100–1000 mg CO₂</div>
+  </div>
+  <div class="metric danger">
+    <div class="metric-label">High impact</div>
+    <div class="metric-value">{{ high_count }}</div>
+    <div class="metric-unit">&gt;1000 mg CO₂</div>
+  </div>
+</div>
+
+<h2 class="h2">Breakdown by model</h2>
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr><th>Model</th><th style="text-align:right">Sessions</th><th style="text-align:right">Total CO₂ (g)</th></tr>
+    </thead>
+    <tbody>
+      {% for row in by_model %}
+      <tr>
+        <td>{{ row.model }}</td>
+        <td style="text-align:right;font-family:var(--head);font-weight:700">{{ row.total }}</td>
+        <td style="text-align:right;color:var(--accent)">{{ row.total_co2|floatformat:4 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3" style="color:var(--muted)">No data yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

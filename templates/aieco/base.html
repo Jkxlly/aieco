@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIECO — {% block title %}AI Carbon Calculator{% endblock %}</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+
+<!-- ── NAV ───────────────────────────────────────────── -->
+<nav>
+  <div class="nav-inner">
+    <a class="brand" href="/">
+      <span class="brand-text">AIECO</span>
+    </a>
+
+    <div class="nav-right">
+      <a class="nav-link" href="/">⚡ Calculator</a>
+      <a class="nav-link" href="{% url 'calculate' %}">✦ Prompt Tool</a>
+      <a class="nav-link" href="{% url 'forum_list' %}">💬 Forum</a>
+      <a class="nav-link" href="{% url 'dashboard' %}">🌍 Dashboard</a>
+
+      <!-- Theme toggle -->
+      <button class="theme-toggle" id="themeToggle" title="Toggle dark / light mode" aria-label="Toggle theme">🌙</button>
+
+      {% if user.is_authenticated %}
+        {% if user.is_staff %}
+          <a class="nav-link" href="/admin/">Admin</a>
+        {% endif %}
+        <a class="btn-login" href="{% url 'logout' %}">Logout</a>
+      {% else %}
+        <a class="btn-login"  href="{% url 'login' %}">Login</a>
+        <a class="btn-signup" href="{% url 'register' %}">Sign up free</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+<!-- ── MAIN ──────────────────────────────────────────── -->
+<main>{% block content %}{% endblock %}</main>
+
+<!-- ── FOOTER ────────────────────────────────────────── -->
+<footer>
+  <span class="brand-text">AIECO</span>
+  <p>Emissions estimates · Samsi et al. (2023) · Guidi et al. (2024) · Faiz et al. (2024)</p>
+  <p style="font-size:11px;opacity:.4;margin-top:4px;">
+    aieco.uk — all figures are research-derived estimates, not verified measurements
+  </p>
+</footer>
+
+<!-- ── ECOBOT FAB ─────────────────────────────────────── -->
+<button id="ecobot-fab" title="Chat with EcoBot" aria-label="Open EcoBot">🤖</button>
+
+<!-- ── ECOBOT WINDOW ──────────────────────────────────── -->
+<div id="ecobot-window" role="dialog" aria-label="EcoBot chat">
+  <div id="ecobot-header">
+    <div>
+      <h3>🤖 EcoBot</h3>
+      <span>AI emissions assistant · powered by Claude</span>
+    </div>
+    <button id="ecobot-close" aria-label="Close EcoBot">✕</button>
+  </div>
+
+  <div id="ecobot-messages">
+    <div class="bot-msg">
+      Hi! I'm EcoBot 👋 I can help you understand your AI carbon emissions,
+      suggest ways to reduce your footprint, or answer any questions about AIECO.
+      What would you like to know?
+    </div>
+  </div>
+
+  <!-- Quick prompts -->
+  <div style="padding:0 12px 10px;display:flex;flex-wrap:wrap;gap:6px;" id="ecobot-suggestions">
+    <button onclick="ecobotSend('How can I reduce my AI carbon footprint?')"
+      style="font-size:11px;padding:5px 10px;border-radius:99px;border:1px solid var(--glass-border);
+             background:var(--glass);color:var(--muted);cursor:pointer;transition:all .2s;"
+      onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+      Reduce my footprint
+    </button>
+    <button onclick="ecobotSend('Which AI model has the lowest carbon footprint?')"
+      style="font-size:11px;padding:5px 10px;border-radius:99px;border:1px solid var(--glass-border);
+             background:var(--glass);color:var(--muted);cursor:pointer;transition:all .2s;"
+      onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+      Lowest carbon model
+    </button>
+    <button onclick="ecobotSend('What does CO₂e mean?')"
+      style="font-size:11px;padding:5px 10px;border-radius:99px;border:1px solid var(--glass-border);
+             background:var(--glass);color:var(--muted);cursor:pointer;transition:all .2s;"
+      onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+      What is CO₂e?
+    </button>
+  </div>
+
+  <div id="ecobot-input-row">
+    <input id="ecobot-input" type="text" placeholder="Ask about AI emissions…" autocomplete="off">
+    <button id="ecobot-send">Send</button>
+  </div>
+</div>
+
+<!-- ── SCRIPTS ────────────────────────────────────────── -->
+{% load static %}
+<script src="{% static 'js/main.js' %}"></script>
+
+<script>
+/* ── THEME TOGGLE ─────────────────────────────────── */
+(function() {
+  const html   = document.documentElement;
+  const btn    = document.getElementById('themeToggle');
+  const saved  = localStorage.getItem('aieco-theme') || 'dark';
+  html.setAttribute('data-theme', saved);
+  btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+
+  btn.addEventListener('click', () => {
+    const current = html.getAttribute('data-theme');
+    const next    = current === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('aieco-theme', next);
+    btn.textContent = next === 'dark' ? '☀️' : '🌙';
+  });
+})();
+
+/* ── ECOBOT ───────────────────────────────────────── */
+const fab      = document.getElementById('ecobot-fab');
+const win      = document.getElementById('ecobot-window');
+const closeBtn = document.getElementById('ecobot-close');
+const input    = document.getElementById('ecobot-input');
+const sendBtn  = document.getElementById('ecobot-send');
+const msgs     = document.getElementById('ecobot-messages');
+const sugg     = document.getElementById('ecobot-suggestions');
+
+let history = [];
+
+fab.addEventListener('click', () => {
+  win.classList.toggle('open');
+  if (win.classList.contains('open')) input.focus();
+});
+closeBtn.addEventListener('click', () => win.classList.remove('open'));
+
+sendBtn.addEventListener('click', () => ecobotSend(input.value));
+input.addEventListener('keydown', e => { if (e.key === 'Enter') ecobotSend(input.value); });
+
+function addMsg(text, role) {
+  const d = document.createElement('div');
+  d.className = role === 'user' ? 'user-msg' : 'bot-msg';
+  d.textContent = text;
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+  return d;
+}
+
+function showTyping() {
+  const d = document.createElement('div');
+  d.className = 'bot-msg bot-typing';
+  d.id = 'typing-indicator';
+  d.innerHTML = '<span></span><span></span><span></span>';
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function hideTyping() {
+  const t = document.getElementById('typing-indicator');
+  if (t) t.remove();
+}
+
+async function ecobotSend(text) {
+  text = (text || '').trim();
+  if (!text) return;
+
+  // Hide quick suggestions after first message
+  if (sugg) sugg.style.display = 'none';
+
+  input.value = '';
+  addMsg(text, 'user');
+  history.push({ role: 'user', content: text });
+
+  showTyping();
+  sendBtn.disabled = true;
+
+  try {
+    const res = await fetch('/api/chat/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+      body: JSON.stringify({ message: text, history: history.slice(-8) })
+    });
+    const data = await res.json();
+    hideTyping();
+    const reply = data.reply || "Sorry, I couldn't get a response. Please try again.";
+    addMsg(reply, 'bot');
+    history.push({ role: 'assistant', content: reply });
+  } catch (err) {
+    hideTyping();
+    addMsg("Sorry, something went wrong. Please try again.", 'bot');
+  } finally {
+    sendBtn.disabled = false;
+    input.focus();
+  }
+}
+
+function getCsrf() {
+  const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+  return cookie ? cookie.split('=')[1] : '';
+}
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

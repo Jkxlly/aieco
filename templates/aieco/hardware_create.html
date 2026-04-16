@@ -1,0 +1,75 @@
+{% extends "aieco/base.html" %}
+{% block title %}New Hardware Run — AI ECO{% endblock %}
+{% block page_id %}hardware{% endblock %}
+
+{% block content %}
+<div style="max-width:700px;margin-top:28px">
+  <h1 class="h1">Log Hardware Run</h1>
+  <p class="muted">Record a GPU/TPU workload. Energy and CO₂ are calculated automatically.</p>
+  {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+
+  <div class="card">
+    <form method="post">
+      {% csrf_token %}
+
+      <label for="title">Run title</label>
+      <input class="input" id="title" type="text" name="title" placeholder="e.g. GPT-4 inference batch — 24hr" required>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label for="ai_model">AI Model</label>
+          <select class="input" id="ai_model" name="ai_model">
+            {% for v,l in model_choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="hardware">Hardware</label>
+          <select class="input" id="hardware" name="hardware">
+            {% for v,l in hardware_choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="operation">Operation type</label>
+          <select class="input" id="operation" name="operation">
+            {% for v,l in operation_choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="precision">Precision</label>
+          <select class="input" id="precision" name="precision">
+            {% for v,l in precision_choices %}
+              <option value="{{ v }}" {% if v == 'fp16' %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="gpu_count">Number of GPUs / TPUs</label>
+          <div class="slider-row">
+            <input type="range" id="gpu_count_range" min="1" max="512" value="8" step="1"
+                   oninput="document.getElementById('gpu_count').value=this.value;document.getElementById('gpuDisplay').textContent=this.value">
+            <span class="slider-val" id="gpuDisplay">8</span>
+          </div>
+          <input type="hidden" id="gpu_count" name="gpu_count" value="8">
+        </div>
+        <div>
+          <label for="duration_h">Duration (hours)</label>
+          <input class="input" id="duration_h" type="number" name="duration_h" value="1" min="0.1" step="0.5">
+        </div>
+        <div>
+          <label for="region">Region (carbon intensity)</label>
+          <select class="input" id="region" name="region">
+            {% for v,l in region_choices %}
+              <option value="{{ v }}" {% if v == '0.4' %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="actions" style="margin-top:20px">
+        <button class="btn btn-primary" type="submit">Calculate &amp; save →</button>
+        <a class="btn" href="{% url 'hardware_list' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
