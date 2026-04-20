@@ -3,6 +3,18 @@ from calculator.models import (
     AIModel, CarbonRegion, HardwareSpec, OperationType, PrecisionType
 )
 
+class HardwareSpec(models.Model):
+    name         = models.CharField(max_length=100, unique=True)
+    manufacturer = models.CharField(max_length=100)
+    tdp_watts    = models.IntegerField()
+
+class OperationType(models.Model):
+    name        = models.CharField(max_length=100, unique=True)
+    energy_mult = models.FloatField()
+
+class PrecisionType(models.Model):
+    name          = models.CharField(max_length=100, unique=True)
+    energy_factor = models.FloatField()
 
 class Command(BaseCommand):
     help = "Seed all reference data from academic literature and mlco2 datasets"
