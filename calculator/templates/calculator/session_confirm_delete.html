@@ -1,49 +1,36 @@
+<!-- # This file is part of AI ECO. # -->
+<!-- session_confirm_delete.html — confirmation page before permanent session deletion -->
+<!-- CASCADE on OneToOneField means prompt_emissions is deleted automatically -->
 {% extends 'calculator/base.html' %}
 {% block title %}Delete Session — AIECO{% endblock %}
-
 {% block content %}
 <div style="min-height:70vh;display:flex;align-items:center;justify-content:center;padding:40px 24px;position:relative;z-index:1;">
   <div style="width:100%;max-width:440px;">
-
     <div class="glass-panel">
       <div class="panel-head">
-        <div class="panel-head-icon" style="background:rgba(229,62,62,0.3);">🗑</div>
-        <div>
-          <h2>Delete session</h2>
-          <p>This action cannot be undone</p>
-        </div>
+        <div class="panel-head-icon" style="background:rgba(229,62,62,0.3);">X</div>
+        <div><h2>Delete session</h2><p>This action cannot be undone</p></div>
       </div>
       <div class="panel-body">
         <p style="font-size:14px;color:var(--muted);margin-bottom:8px;line-height:1.6;">
-          Are you sure you want to delete
-          <strong style="color:var(--text);">{{ session.title|default:"Untitled session" }}</strong>?
+          Are you sure you want to delete <strong style="color:var(--text);">{{ session.title|default:"Untitled session" }}</strong>?
         </p>
         <p style="font-size:13px;color:var(--muted);margin-bottom:24px;">
           This will permanently remove the session and its emissions data.
         </p>
-
-        <form method="post" style="display:flex;gap:10px;">
+        <form method="post" action="{% url 'session_delete' session.pk %}" style="display:flex;gap:10px;">
           {% csrf_token %}
           <button type="submit"
             style="flex:1;padding:12px;border-radius:10px;background:rgba(229,62,62,0.15);
                    border:1px solid rgba(229,62,62,0.35);color:#f87171;font-weight:800;
-                   font-size:14px;cursor:pointer;transition:background .2s;"
-            onmouseover="this.style.background='rgba(229,62,62,0.25)'"
-            onmouseout="this.style.background='rgba(229,62,62,0.15)'">
-            Yes, delete
-          </button>
+                   font-size:14px;cursor:pointer;">Yes, delete</button>
           <a href="{% url 'session_detail' session.pk %}"
              style="flex:1;padding:12px;border-radius:10px;background:var(--glass);
                     border:1px solid var(--glass-border);color:var(--text);font-weight:700;
-                    font-size:14px;text-align:center;transition:background .2s;"
-             onmouseover="this.style.background='var(--glass-hover)'"
-             onmouseout="this.style.background='var(--glass)'">
-            Cancel
-          </a>
+                    font-size:14px;text-align:center;">Cancel</a>
         </form>
       </div>
     </div>
-
   </div>
 </div>
 {% endblock %}

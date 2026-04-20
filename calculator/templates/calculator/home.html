@@ -1,12 +1,13 @@
 <!-- # This file is part of AI ECO. # -->
-<!-- home.html — homepage hardware calculator, client-side calculation only, no database write -->
+<!-- home.html — homepage hardware calculator -->
+<!-- All calculation runs client-side in JavaScript — no server request, no database write -->
 {% extends 'calculator/base.html' %}
 {% block title %}Hardware Calculator — AIECO{% endblock %}
 
 {% block content %}
 <div style="max-width:1100px;margin:0 auto;padding:48px 24px 100px;position:relative;z-index:1;">
 
-  <!-- Hero section -->
+  <!-- Hero section — headline and links to both calculators -->
   <div style="text-align:center;margin-bottom:52px;">
     <div class="hero-pill">
       <span class="hero-pill-dot"></span>
@@ -24,22 +25,19 @@
          style="padding:11px 24px;border-radius:10px;
                 background:linear-gradient(135deg,var(--btn-from),var(--btn-to));
                 color:#fff;font-weight:700;font-size:14px;
-                box-shadow:0 4px 20px var(--accent-glow);transition:opacity .2s;"
-         onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                box-shadow:0 4px 20px var(--accent-glow);">
         Hardware Calculator
       </a>
       <a href="{% url 'calculate' %}"
          style="padding:11px 24px;border-radius:10px;
                 background:var(--glass);border:1px solid var(--glass-border);
-                color:var(--text);font-weight:700;font-size:14px;transition:background .2s;"
-         onmouseover="this.style.background='var(--glass-hover)'"
-         onmouseout="this.style.background='var(--glass)'">
+                color:var(--text);font-weight:700;font-size:14px;">
         Prompt Calculator
       </a>
     </div>
   </div>
 
-  <!-- Two-column calculator grid -->
+  <!-- Two-column grid: left = inputs, right = results -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;" id="hw-calc">
 
     <!-- Left panel: input controls -->
@@ -48,15 +46,16 @@
         <div class="panel-head-icon">C</div>
         <div>
           <h2>Calculation Parameters</h2>
-          <p>All values sourced from peer-reviewed literature</p>
+          <p>Values sourced from peer-reviewed literature</p>
         </div>
       </div>
       <div class="panel-body">
 
-        <!-- AI Model dropdown — populated from ai_model database table -->
+        <!-- AI model dropdown — options populated from ai_model DB table by views.home() -->
+        <!-- data-wh stores wh_per_token used in the energy formula -->
         <div class="field">
           <label class="field-label">AI Model</label>
-          <select id="hw-model" onchange="hwCalculate()">
+          <select id="hw-model">
             {% for m in ai_models %}
             <option value="{{ m.id }}"
               data-wh="{{ m.wh_per_token }}"
@@ -67,10 +66,11 @@
           </select>
         </div>
 
-        <!-- Operation type — multiplier applied to base energy calculation -->
+        <!-- Operation type — energy_mult multiplies base energy -->
+        <!-- Inference=1.0x, Training=3.2x, RLHF=4.5x -->
         <div class="field">
           <label class="field-label">Operation Type</label>
-          <select id="hw-op" onchange="hwCalculate()">
+          <select id="hw-op">
             {% for op in operations %}
             <option value="{{ op.id }}" data-mult="{{ op.energy_mult }}">
               {{ op.name }} (x{{ op.energy_mult }})
@@ -79,10 +79,10 @@
           </select>
         </div>
 
-        <!-- Hardware spec — TDP in watts from hardware_spec table -->
+        <!-- Hardware spec — data-tdp is thermal design power in watts -->
         <div class="field">
           <label class="field-label">Hardware</label>
-          <select id="hw-hardware" onchange="hwCalculate()">
+          <select id="hw-hardware">
             {% for h in hardware_list %}
             <option value="{{ h.id }}" data-tdp="{{ h.tdp_watts }}" data-name="{{ h.name }}">
               {{ h.name }} ({{ h.tdp_watts }}W)
@@ -92,6 +92,7 @@
         </div>
 
         <!-- GPU count slider — range 1 to 512 -->
+        <!-- oninput updates the displayed value label in real time -->
         <div class="field">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
             <span class="field-label" style="margin-bottom:0;">Number of GPUs / TPUs</span>
@@ -101,17 +102,18 @@
             </span>
           </div>
           <input type="range" id="hw-gpus" min="1" max="512" value="8" step="1"
-            oninput="document.getElementById('gpu-val').textContent=this.value;hwCalculate()"
+            oninput="document.getElementById('gpu-val').textContent=this.value;"
             style="width:100%;accent-color:var(--accent);height:4px;cursor:pointer;">
           <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px;">
             <span>1</span><span>128</span><span>512</span>
           </div>
         </div>
 
-        <!-- Precision format — energy reduction factor from precision_type table -->
+        <!-- Precision format — data-factor is energy reduction vs FP32 baseline -->
+        <!-- INT8 = 0.35 meaning 65% less energy than FP32 -->
         <div class="field">
           <label class="field-label">Precision Format</label>
-          <select id="hw-precision" onchange="hwCalculate()">
+          <select id="hw-precision">
             {% for p in precision_types %}
             <option value="{{ p.id }}" data-factor="{{ p.energy_factor }}">
               {{ p.name }}
@@ -120,17 +122,16 @@
           </select>
         </div>
 
-        <!-- Duration input -->
+        <!-- Duration in hours — user-entered -->
         <div class="field">
           <label class="field-label">Duration (hours)</label>
-          <input type="number" id="hw-hours" value="24" min="0.1" step="0.5"
-            oninput="hwCalculate()" placeholder="24">
+          <input type="number" id="hw-hours" value="24" min="0.1" step="0.5" placeholder="24">
         </div>
 
-        <!-- Region — carbon intensity kg/kWh from carbon_region table -->
+        <!-- Region — data-ci is carbon intensity in kg CO2 per kWh -->
         <div class="field" style="margin-bottom:0;">
           <label class="field-label">Region</label>
-          <select id="hw-region" onchange="hwCalculate()">
+          <select id="hw-region">
             {% for r in regions %}
             <option value="{{ r.id }}"
               data-ci="{{ r.carbon_intensity_kg_kwh }}"
@@ -141,18 +142,19 @@
           </select>
         </div>
 
+        <!-- Calculate button — calls hwCalculate() defined in extra_js block below -->
         <div style="margin-top:20px;">
-          <button class="calc-btn" onclick="hwCalculate()">Calculate Energy Consumption</button>
+          <button class="calc-btn" id="hw-calc-btn" type="button">
+            Calculate Energy Consumption
+          </button>
         </div>
 
       </div>
     </div>
 
-    <!-- Right panel: results and equivalents -->
+    <!-- Right panel: results populated by hwCalculate() -->
     <div>
-
-      <!-- Results panel — populated by hwCalculate() JavaScript function -->
-      <div class="glass-panel" style="margin-bottom:16px;" id="results-panel">
+      <div class="glass-panel" style="margin-bottom:16px;">
         <div class="panel-head">
           <div class="panel-head-icon">R</div>
           <div>
@@ -160,6 +162,7 @@
             <p id="results-subtitle">Configure parameters and calculate</p>
           </div>
         </div>
+        <!-- results-body is replaced entirely each time hwCalculate() runs -->
         <div class="panel-body" id="results-body">
           <div class="empty-state">
             <div class="empty-orb">—</div>
@@ -169,7 +172,7 @@
         </div>
       </div>
 
-      <!-- Methodology note -->
+      <!-- Methodology note citing academic sources -->
       <div class="glass-panel" style="margin-bottom:16px;">
         <div class="panel-body"
           style="font-size:12px;color:var(--muted);line-height:1.7;padding:16px 20px;">
@@ -182,13 +185,13 @@
         </div>
       </div>
 
-      <!-- Sign-up nudge for unauthenticated users -->
+      <!-- Sign-up nudge shown only to unauthenticated users -->
       {% if not user.is_authenticated %}
       <div class="glass-panel">
         <div class="panel-body" style="text-align:center;padding:20px;">
           <div style="font-weight:800;font-size:15px;margin-bottom:6px;">Save your results</div>
           <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
-            Create a free account to track sessions, compare models and monitor your monthly CO2 budget.
+            Create a free account to track sessions and monitor your monthly CO2 budget.
           </div>
           <a href="{% url 'register' %}" class="calc-btn"
              style="width:auto;padding:10px 22px;display:inline-block;font-size:13px;">
@@ -205,54 +208,84 @@
 
 {% block extra_js %}
 <script>
-/* hwCalculate — reads input values, runs energy/carbon formula, renders results panel
-   Formula: energy_kwh = (TDP x GPUs x op_mult x prec_factor x PUE x hours) / 1000
-   All input values come from data attributes embedded by Django template engine at page load */
+// hwCalculate — reads form values, runs energy/CO2 formula, renders results
+// Called by the Calculate button click event set up at the bottom of this script
+// Formula: energy_kwh = (TDP x GPUs x op_mult x prec_factor x PUE x hours) / 1000
+// All reference values come from data-* attributes embedded by Django at page load
 function hwCalculate() {
-  var modelSel   = document.getElementById('hw-model');
-  var opSel      = document.getElementById('hw-op');
+
+  // Read selected option elements from each dropdown
   var hwSel      = document.getElementById('hw-hardware');
-  var gpus       = parseFloat(document.getElementById('hw-gpus').value) || 1;
+  var opSel      = document.getElementById('hw-op');
   var precSel    = document.getElementById('hw-precision');
-  var hours      = parseFloat(document.getElementById('hw-hours').value) || 1;
   var regionSel  = document.getElementById('hw-region');
+  var gpus       = parseFloat(document.getElementById('hw-gpus').value) || 1;
+  var hours      = parseFloat(document.getElementById('hw-hours').value) || 1;
 
-  /* Read reference values from data attributes — set by Django template -->
-  var tdp        = parseFloat(hwSel.selectedOptions[0].dataset.tdp   || 0);
-  var opMult     = parseFloat(opSel.selectedOptions[0].dataset.mult  || 1);
-  var precFactor = parseFloat(precSel.selectedOptions[0].dataset.factor || 1);
-  var ci         = parseFloat(regionSel.selectedOptions[0].dataset.ci || 0);
-  var regionName = regionSel.selectedOptions[0].dataset.name || '';
-  var hwName     = hwSel.selectedOptions[0].dataset.name || '';
+  // Guard: if dropdowns are empty (no seed data) show a warning
+  if (!hwSel.options.length || !opSel.options.length ||
+      !precSel.options.length || !regionSel.options.length) {
+    document.getElementById('results-body').innerHTML =
+      '<div class="empty-state"><div class="empty-title">Reference data missing</div>' +
+      '<div class="empty-sub">Run python manage.py seed_data to populate the database.</div></div>';
+    return;
+  }
 
-  /* PUE = 1.4 (IEA global average data centre overhead) */
+  // Extract data attributes set by the Django template engine at page load
+  var hwOpt      = hwSel.options[hwSel.selectedIndex];
+  var opOpt      = opSel.options[opSel.selectedIndex];
+  var precOpt    = precSel.options[precSel.selectedIndex];
+  var regionOpt  = regionSel.options[regionSel.selectedIndex];
+
+  var tdp        = parseFloat(hwOpt.getAttribute('data-tdp'))    || 0;
+  var opMult     = parseFloat(opOpt.getAttribute('data-mult'))   || 1;
+  var precFactor = parseFloat(precOpt.getAttribute('data-factor'))|| 1;
+  var ci         = parseFloat(regionOpt.getAttribute('data-ci')) || 0;
+  var regionName = regionOpt.getAttribute('data-name') || regionOpt.text;
+  var hwName     = hwOpt.getAttribute('data-name') || hwOpt.text;
+
+  // PUE = 1.4 — IEA global average data centre Power Usage Effectiveness
+  // Accounts for cooling, networking and other infrastructure overhead
   var PUE       = 1.4;
   var energyKwh = (tdp * gpus * opMult * precFactor * PUE * hours) / 1000;
   var co2Kg     = energyKwh * ci;
   var co2g      = co2Kg * 1000;
-  var costGbp   = energyKwh * 0.28; /* Ofgem 2024 UK average unit rate */
 
-  /* Real-world equivalents using published constants */
-  var carKm    = (co2Kg / 0.21).toFixed(1);              /* DEFRA 2024 */
-  var phones   = Math.round((energyKwh * 1000) / 8.22);  /* Average Li-ion battery */
-  var flights  = (co2Kg / 990).toFixed(4);               /* ICAO LHR-JFK return */
-  var trees    = (co2Kg / 21).toFixed(2);                /* Nowak & Crane 2002 */
-  var homeDays = (energyKwh / 10.7).toFixed(1);          /* Ofgem household average */
-  var searches = Math.round(co2Kg / 0.0002);             /* Google Environmental Report 2023 */
+  // Cost uses Ofgem 2024 UK average electricity unit rate
+  var costGbp   = energyKwh * 0.28;
 
-  /* Recommendations based on current selection */
+  // Real-world equivalents — each divides CO2 or energy by a published constant
+  var carKm    = (co2Kg / 0.21).toFixed(1);             // DEFRA 2024: 0.21 kg CO2 per km
+  var phones   = Math.round((energyKwh * 1000) / 8.22); // Average Li-ion battery capacity
+  var flights  = (co2Kg / 990).toFixed(4);              // ICAO LHR-JFK return flight
+  var trees    = (co2Kg / 21).toFixed(2);               // Nowak and Crane 2002
+  var homeDays = (energyKwh / 10.7).toFixed(1);         // Ofgem household average
+  var searches = Math.round(co2Kg / 0.0002);            // Google Environmental Report 2023
+
+  // Build recommendations based on current selection
   var recs = [];
-  if (ci > 0.3)          recs.push('Switch to a lower-carbon region (France or Norway) to cut emissions by up to 16x');
-  if (precFactor > 0.35) recs.push('Use INT8 precision — reduces energy by approximately 65% with minimal quality loss');
-  if (!hwName.includes('H100')) recs.push('Consider NVIDIA H100 SXM5 — approximately 71% lower operational carbon vs V100');
-  if (opMult >= 3.2)     recs.push('Training is 3.2x more energy intensive than inference — consider pre-trained models');
+  if (ci > 0.3)
+    recs.push('Switch to a lower-carbon region such as France or Norway to cut emissions by up to 16x');
+  if (precFactor > 0.35)
+    recs.push('Use INT8 precision — reduces energy by approximately 65% with minimal quality loss');
+  if (hwName.indexOf('H100') === -1)
+    recs.push('Consider NVIDIA H100 SXM5 — approximately 71% lower operational carbon vs V100');
+  if (opMult >= 3.2)
+    recs.push('Training is 3.2x more energy intensive than inference — consider pre-trained models');
 
-  /* Update subtitle with current configuration */
+  // Update results panel subtitle with current configuration summary
   var subtitle = document.getElementById('results-subtitle');
   if (subtitle) subtitle.textContent = hwName + ' x ' + gpus + ' · ' + hours + 'h · ' + regionName;
 
-  /* Render results into the results panel */
+  // Format CO2 for display — show grams if small, kg if large
+  var co2Display = co2g < 1000
+    ? co2g.toFixed(2) + 'g'
+    : co2Kg.toFixed(2) + 'kg';
+
+  // Build and inject the results HTML into the results-body div
   document.getElementById('results-body').innerHTML =
+
+    // Three metric cards: energy, CO2, cost
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">' +
       '<div class="metric-card" style="background:var(--card-pink);">' +
         '<div class="metric-label">Energy</div>' +
@@ -261,10 +294,8 @@ function hwCalculate() {
       '</div>' +
       '<div class="metric-card" style="background:var(--card-green);">' +
         '<div class="metric-label">CO2e</div>' +
-        '<div class="metric-value" style="font-size:20px;color:var(--accent);">' +
-          (co2g < 1000 ? co2g.toFixed(2) + 'g' : co2Kg.toFixed(2) + 'kg') +
-        '</div>' +
-        '<div class="metric-sub">' + co2Kg.toFixed(3) + ' kg</div>' +
+        '<div class="metric-value" style="font-size:20px;color:var(--accent);">' + co2Display + '</div>' +
+        '<div class="metric-sub">' + co2Kg.toFixed(4) + ' kg</div>' +
       '</div>' +
       '<div class="metric-card" style="background:var(--card-blue);">' +
         '<div class="metric-label">Cost</div>' +
@@ -273,9 +304,10 @@ function hwCalculate() {
       '</div>' +
     '</div>' +
 
+    // Real-world equivalents grid
     '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;">Real-world equivalents</div>' +
     '<div class="equiv-grid" style="margin-bottom:16px;">' +
-      '<div class="equiv-tile"><div class="equiv-icon">Car</div><div class="equiv-val">' + carKm + ' km</div><div class="equiv-lbl">Petrol car</div></div>' +
+      '<div class="equiv-tile"><div class="equiv-icon">Car</div><div class="equiv-val">' + carKm + ' km</div><div class="equiv-lbl">Petrol car (DEFRA 2024)</div></div>' +
       '<div class="equiv-tile"><div class="equiv-icon">Phone</div><div class="equiv-val">' + phones.toLocaleString() + '</div><div class="equiv-lbl">Phone charges</div></div>' +
       '<div class="equiv-tile"><div class="equiv-icon">Flight</div><div class="equiv-val">' + flights + '</div><div class="equiv-lbl">LHR to JFK flights</div></div>' +
       '<div class="equiv-tile"><div class="equiv-icon">Tree</div><div class="equiv-val">' + trees + ' yrs</div><div class="equiv-lbl">Tree absorption</div></div>' +
@@ -283,17 +315,24 @@ function hwCalculate() {
       '<div class="equiv-tile"><div class="equiv-icon">Search</div><div class="equiv-val">' + searches.toLocaleString() + '</div><div class="equiv-lbl">Google searches</div></div>' +
     '</div>' +
 
+    // Recommendations section — only rendered when there are suggestions
     (recs.length ? (
       '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;">Recommendations</div>' +
-      '<div style="display:flex;flex-direction:column;gap:8px;">' +
-        recs.map(function(r) {
-          return '<div style="background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text);line-height:1.5;">' + r + '</div>';
-        }).join('') +
-      '</div>'
+      recs.map(function(r) {
+        return '<div style="background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);' +
+               'border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text);line-height:1.5;margin-bottom:8px;">' + r + '</div>';
+      }).join('')
     ) : '');
 }
 
-/* Run calculation on page load so results panel is not empty */
-document.addEventListener('DOMContentLoaded', hwCalculate);
+// Attach click handler to button — runs hwCalculate when clicked
+document.addEventListener('DOMContentLoaded', function() {
+  var btn = document.getElementById('hw-calc-btn');
+  if (btn) {
+    btn.addEventListener('click', hwCalculate);
+  }
+  // Run once on page load so results panel is not empty
+  hwCalculate();
+});
 </script>
 {% endblock %}

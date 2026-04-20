@@ -1,19 +1,23 @@
 <!-- # This file is part of AI ECO. # -->
-<!-- base.html — master layout template, extended by all other pages -->
+<!-- base.html — master layout template extended by every other page -->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Page title block — each child template overrides this -->
   <title>AIECO — {% block title %}AI Carbon Calculator{% endblock %}</title>
   {% load static %}
+  <!-- Main stylesheet — purple glassmorphism theme with dark/light CSS variables -->
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
 
-<!-- Navigation bar — sticky at top, theme-aware -->
+<!-- Navigation bar — sticky, blurs background using CSS backdrop-filter -->
 <nav>
   <div class="nav-inner">
+
+    <!-- Brand logo — links back to homepage -->
     <a class="brand" href="/">
       <span class="brand-text">AIECO</span>
     </a>
@@ -26,12 +30,12 @@
       <a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a>
       <a class="nav-link" href="{% url 'session_list' %}">Sessions</a>
 
-      <!-- Dark / light mode toggle — preference saved to localStorage -->
+      <!-- Theme toggle — saves preference to localStorage -->
       <button class="theme-toggle" id="themeToggle" title="Toggle dark / light mode" aria-label="Toggle theme">
         Light
       </button>
 
-      <!-- Auth links — change based on login state -->
+      <!-- Auth links — conditional on login state -->
       {% if user.is_authenticated %}
         {% if user.is_staff %}
           <a class="nav-link" href="/admin/">Admin</a>
@@ -45,10 +49,10 @@
   </div>
 </nav>
 
-<!-- Main page content — injected by child templates -->
+<!-- Main content area — child templates inject content via block content -->
 <main>{% block content %}{% endblock %}</main>
 
-<!-- Footer -->
+<!-- Footer with methodology citation sources -->
 <footer>
   <span class="brand-text">AIECO</span>
   <p>Emissions estimates · Samsi et al. (2023) · Guidi et al. (2024) · Faiz et al. (2024)</p>
@@ -57,46 +61,41 @@
   </p>
 </footer>
 
-<!-- EcoBot floating action button — opens chat window -->
+<!-- EcoBot floating action button — fixed bottom-right, available on every page -->
 <button id="ecobot-fab" title="Chat with EcoBot" aria-label="Open EcoBot">Bot</button>
 
-<!-- EcoBot chat window -->
+<!-- EcoBot chat window — hidden until FAB is clicked -->
 <div id="ecobot-window" role="dialog" aria-label="EcoBot chat">
   <div id="ecobot-header">
     <div>
       <h3>EcoBot</h3>
-      <span>AI emissions assistant · powered by Claude</span>
+      <span>AI emissions assistant</span>
     </div>
     <button id="ecobot-close" aria-label="Close EcoBot">x</button>
   </div>
 
-  <!-- Chat message area -->
+  <!-- Message area — bot and user messages appended here by JavaScript -->
   <div id="ecobot-messages">
     <div class="bot-msg">
-      Hi, I am EcoBot. I can help you understand your AI carbon emissions,
-      suggest ways to reduce your footprint, or answer any questions about AIECO.
-      What would you like to know?
+      Hi, I am EcoBot. Ask me anything about AI carbon emissions or how to reduce your footprint.
     </div>
   </div>
 
-  <!-- Quick-prompt suggestion buttons -->
+  <!-- Quick suggestion buttons — hidden after first message is sent -->
   <div style="padding:0 12px 10px;display:flex;flex-wrap:wrap;gap:6px;" id="ecobot-suggestions">
     <button onclick="ecobotSend('How can I reduce my AI carbon footprint?')"
       style="font-size:11px;padding:5px 10px;border-radius:99px;border:1px solid var(--glass-border);
-             background:var(--glass);color:var(--muted);cursor:pointer;transition:all .2s;"
-      onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+             background:var(--glass);color:var(--muted);cursor:pointer;">
       Reduce my footprint
     </button>
     <button onclick="ecobotSend('Which AI model has the lowest carbon footprint?')"
       style="font-size:11px;padding:5px 10px;border-radius:99px;border:1px solid var(--glass-border);
-             background:var(--glass);color:var(--muted);cursor:pointer;transition:all .2s;"
-      onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+             background:var(--glass);color:var(--muted);cursor:pointer;">
       Lowest carbon model
     </button>
     <button onclick="ecobotSend('What does CO2e mean?')"
       style="font-size:11px;padding:5px 10px;border-radius:99px;border:1px solid var(--glass-border);
-             background:var(--glass);color:var(--muted);cursor:pointer;transition:all .2s;"
-      onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+             background:var(--glass);color:var(--muted);cursor:pointer;">
       What is CO2e?
     </button>
   </div>
@@ -109,27 +108,27 @@
 </div>
 
 {% load static %}
-<script src="{% static 'js/main.js' %}"></script>
-
 <script>
-/* Theme toggle — reads saved preference from localStorage on load */
+// Theme toggle — reads saved preference from localStorage on page load
 (function() {
   var html  = document.documentElement;
   var btn   = document.getElementById('themeToggle');
   var saved = localStorage.getItem('aieco-theme') || 'dark';
   html.setAttribute('data-theme', saved);
-  btn.textContent = saved === 'dark' ? 'Light' : 'Dark';
+  if (btn) btn.textContent = saved === 'dark' ? 'Light' : 'Dark';
 
-  btn.addEventListener('click', function() {
-    var current = html.getAttribute('data-theme');
-    var next    = current === 'dark' ? 'light' : 'dark';
-    html.setAttribute('data-theme', next);
-    localStorage.setItem('aieco-theme', next);
-    btn.textContent = next === 'dark' ? 'Light' : 'Dark';
-  });
+  if (btn) {
+    btn.addEventListener('click', function() {
+      var current = html.getAttribute('data-theme');
+      var next    = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('aieco-theme', next);
+      btn.textContent = next === 'dark' ? 'Light' : 'Dark';
+    });
+  }
 })();
 
-/* EcoBot — toggle chat window open/closed */
+// EcoBot — reference DOM elements
 var fab      = document.getElementById('ecobot-fab');
 var win      = document.getElementById('ecobot-window');
 var closeBtn = document.getElementById('ecobot-close');
@@ -138,29 +137,37 @@ var sendBtn  = document.getElementById('ecobot-send');
 var msgs     = document.getElementById('ecobot-messages');
 var sugg     = document.getElementById('ecobot-suggestions');
 
-var history = [];
+// Conversation history array — passed to API so Claude has context
+var chatHistory = [];
 
-fab.addEventListener('click', function() {
-  win.classList.toggle('open');
-  if (win.classList.contains('open')) input.focus();
+// Toggle chat window open or closed when FAB is clicked
+if (fab) {
+  fab.addEventListener('click', function() {
+    win.classList.toggle('open');
+    if (win.classList.contains('open') && input) input.focus();
+  });
+}
+
+if (closeBtn) {
+  closeBtn.addEventListener('click', function() { win.classList.remove('open'); });
+}
+
+// Allow sending with Enter key or Send button
+if (sendBtn) sendBtn.addEventListener('click', function() { ecobotSend(input.value); });
+if (input)   input.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') ecobotSend(input.value);
 });
-closeBtn.addEventListener('click', function() { win.classList.remove('open'); });
 
-/* Send message on button click or Enter key */
-sendBtn.addEventListener('click', function() { ecobotSend(input.value); });
-input.addEventListener('keydown', function(e) { if (e.key === 'Enter') ecobotSend(input.value); });
-
-/* Add a message bubble to the chat window */
+// Add a message bubble to the chat window
 function addMsg(text, role) {
   var d = document.createElement('div');
   d.className = role === 'user' ? 'user-msg' : 'bot-msg';
   d.textContent = text;
   msgs.appendChild(d);
   msgs.scrollTop = msgs.scrollHeight;
-  return d;
 }
 
-/* Show animated typing indicator while waiting for API response */
+// Show animated typing indicator while waiting for API response
 function showTyping() {
   var d = document.createElement('div');
   d.className = 'bot-msg bot-typing';
@@ -169,47 +176,52 @@ function showTyping() {
   msgs.appendChild(d);
   msgs.scrollTop = msgs.scrollHeight;
 }
+
+// Remove typing indicator once response arrives
 function hideTyping() {
   var t = document.getElementById('typing-indicator');
   if (t) t.remove();
 }
 
-/* Send a message to the EcoBot API and display the response */
+// Send message to EcoBot API proxy — API key never exposed to browser
 async function ecobotSend(text) {
   text = (text || '').trim();
   if (!text) return;
 
-  /* Hide quick suggestions after the first message */
+  // Hide suggestion buttons after the first real message
   if (sugg) sugg.style.display = 'none';
 
-  input.value = '';
+  if (input) input.value = '';
   addMsg(text, 'user');
-  history.push({ role: 'user', content: text });
-
+  chatHistory.push({ role: 'user', content: text });
   showTyping();
-  sendBtn.disabled = true;
+  if (sendBtn) sendBtn.disabled = true;
 
   try {
     var res = await fetch('/api/chat/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
-      body: JSON.stringify({ message: text, history: history.slice(-8) })
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrf()
+      },
+      // Send last 8 turns so Claude has conversation context
+      body: JSON.stringify({ message: text, history: chatHistory.slice(-8) })
     });
     var data = await res.json();
     hideTyping();
     var reply = data.reply || 'Sorry, I could not get a response. Please try again.';
     addMsg(reply, 'bot');
-    history.push({ role: 'assistant', content: reply });
+    chatHistory.push({ role: 'assistant', content: reply });
   } catch (err) {
     hideTyping();
     addMsg('Something went wrong. Please try again.', 'bot');
   } finally {
-    sendBtn.disabled = false;
-    input.focus();
+    if (sendBtn) sendBtn.disabled = false;
+    if (input) input.focus();
   }
 }
 
-/* Read CSRF token from browser cookie for POST requests */
+// Read CSRF token from browser cookie — required for Django POST requests
 function getCsrf() {
   var cookie = document.cookie.split(';').find(function(c) {
     return c.trim().startsWith('csrftoken=');
@@ -218,6 +230,7 @@ function getCsrf() {
 }
 </script>
 
+<!-- Extra JS block — child templates inject page-specific scripts here -->
 {% block extra_js %}{% endblock %}
 </body>
 </html>

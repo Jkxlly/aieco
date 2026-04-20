@@ -1,5 +1,5 @@
 <!-- # This file is part of AI ECO. # -->
-<!-- login.html — user authentication page -->
+<!-- login.html — user login page using Django AuthenticationForm with PBKDF2-SHA256 verification -->
 {% extends 'calculator/base.html' %}
 {% block title %}Login — AIECO{% endblock %}
 {% block content %}
@@ -12,8 +12,10 @@
     </div>
     <div class="glass-panel">
       <div class="panel-body">
-        <form method="post">
+        <!-- Login form — POST to /login/ -->
+        <form method="post" action="{% url 'login' %}">
           {% csrf_token %}
+          <!-- Error banner shown if credentials are invalid -->
           {% if form.errors %}
           <div style="background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#f87171;">
             Invalid username or password. Please try again.

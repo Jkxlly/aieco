@@ -1,5 +1,6 @@
 <!-- # This file is part of AI ECO. # -->
-<!-- register.html — new user registration page, creates user and user_profile via post_save signal -->
+<!-- register.html — new user registration -->
+<!-- Creates user and user_profile via post_save signal on successful submission -->
 {% extends 'calculator/base.html' %}
 {% block title %}Sign Up — AIECO{% endblock %}
 {% block content %}
@@ -12,8 +13,10 @@
     </div>
     <div class="glass-panel">
       <div class="panel-body">
-        <form method="post">
+        <!-- Registration form — POST to /register/ -->
+        <form method="post" action="{% url 'register' %}">
           {% csrf_token %}
+          <!-- Field-level error display — iterates form errors -->
           {% if form.errors %}
           <div style="background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#f87171;">
             {% for field in form %}{% for error in field.errors %}{{ field.label }}: {{ error }}<br>{% endfor %}{% endfor %}

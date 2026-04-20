@@ -1,5 +1,6 @@
 <!-- # This file is part of AI ECO. # -->
-<!-- calculate.html — prompt-based carbon calculator, saves session to PostgreSQL -->
+<!-- calculate.html — prompt-based carbon calculator -->
+<!-- Submits via Django form POST and saves to PostgreSQL via PromptEmissions.save() -->
 {% extends 'calculator/base.html' %}
 {% block title %}Prompt Calculator — AIECO{% endblock %}
 
@@ -30,10 +31,13 @@
       </div>
     </div>
     <div class="panel-body">
-      <form method="post">
+
+      <!-- Django form — POST triggers views.calculate which saves session and runs pipeline -->
+      <!-- action is explicit to ensure form submits to correct URL -->
+      <form method="post" action="{% url 'calculate' %}" id="prompt-form">
         {% csrf_token %}
 
-        <!-- Session title -->
+        <!-- Session title field -->
         <div class="field">
           <label class="field-label">Session title</label>
           {{ form.title }}
@@ -42,12 +46,13 @@
           </div>
         </div>
 
-        <!-- Prompt text with live token counter -->
+        <!-- Prompt textarea with live token counter -->
+        <!-- liveWords and liveTokens are updated by the JavaScript below -->
         <div class="field">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
             <span class="field-label" style="margin-bottom:0;">Your prompt</span>
             <div style="display:flex;align-items:center;gap:6px;">
-              <span id="liveWords"  style="font-size:12px;color:var(--muted);">0 words</span>
+              <span id="liveWords" style="font-size:12px;color:var(--muted);">0 words</span>
               <span style="font-size:11px;color:var(--muted2);">·</span>
               <span id="liveTokens" style="font-size:12px;font-weight:700;color:var(--accent);">~0 tokens</span>
             </div>
@@ -58,7 +63,7 @@
           </div>
         </div>
 
-        <!-- Model and region selection -->
+        <!-- Model and region dropdowns in a two-column grid -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;">
           <div class="field" style="margin-bottom:0;">
             <label class="field-label">AI Model</label>
@@ -73,7 +78,7 @@
           </div>
         </div>
 
-        <!-- Optional notes field -->
+        <!-- Optional notes field — stored in prompt_session.notes, not used in calculation -->
         <div class="field">
           <label class="field-label">
             Notes
@@ -82,16 +87,21 @@
           {{ form.notes }}
         </div>
 
-        <!-- Methodology disclosure -->
+        <!-- Methodology disclosure box -->
         <div style="background:rgba(167,139,250,0.06);border:1px solid rgba(167,139,250,0.2);
              border-radius:12px;padding:14px 16px;margin-bottom:20px;
              font-size:12px;color:var(--muted);line-height:1.7;">
           <strong style="color:var(--accent);">Methodology:</strong>
-          Tokens = words x 1.33. Energy = tokens x Wh/token (Samsi et al., 2023).
+          Tokens = words x 1.33 (Samsi et al., 2023).
+          Energy = tokens x Wh/token.
           CO2 = energy x regional carbon intensity (Guidi et al., 2024).
         </div>
 
-        <button type="submit" class="calc-btn">Calculate Carbon Footprint</button>
+        <!-- Submit button — type="submit" ensures form POST fires correctly -->
+        <button type="submit" class="calc-btn">
+          Calculate Carbon Footprint
+        </button>
+
       </form>
     </div>
   </div>
@@ -101,32 +111,41 @@
 
 {% block extra_js %}
 <script>
-/* Live token counter — updates word and token estimates as the user types
-   Uses multiple fallback selectors to find the textarea regardless of Django-generated ID */
+// Live token counter — updates word and token estimates as the user types
+// Uses multiple fallback selectors to find the textarea regardless of Django-generated ID
 document.addEventListener('DOMContentLoaded', function() {
+
+  // Try id first, then name attribute, then any textarea inside the form
   var ta = document.getElementById('id_prompt_text')
         || document.querySelector('textarea[name="prompt_text"]')
+        || document.querySelector('#prompt-form textarea')
         || document.querySelector('form textarea');
 
   var wordEl  = document.getElementById('liveWords');
   var tokenEl = document.getElementById('liveTokens');
 
+  // If elements not found, exit silently — counter is non-critical
   if (!ta || !wordEl || !tokenEl) return;
 
-  function update() {
+  function updateCounter() {
+    // Split on whitespace to count words, trimming leading and trailing space
     var val   = ta.value.trim();
     var words = val === '' ? [] : val.split(/\s+/);
     var w     = words.length;
+    // Token estimate: multiply word count by 1.33 per Samsi et al. (2023)
     var t     = Math.round(w * 1.33);
     wordEl.textContent  = w + (w === 1 ? ' word' : ' words');
     tokenEl.textContent = '~' + t + (t === 1 ? ' token' : ' tokens');
   }
 
-  ta.addEventListener('input', update);
-  ta.addEventListener('keyup', update);
-  /* Delay after paste to allow browser to populate the value first */
-  ta.addEventListener('paste', function() { setTimeout(update, 10); });
-  update();
+  // Listen on input, keyup and paste to catch all ways text can change
+  ta.addEventListener('input',  updateCounter);
+  ta.addEventListener('keyup',  updateCounter);
+  // Delay after paste to allow browser to populate the textarea value first
+  ta.addEventListener('paste', function() { setTimeout(updateCounter, 10); });
+
+  // Run once on load in case the field already has a value (e.g. editing a session)
+  updateCounter();
 });
 </script>
 {% endblock %}

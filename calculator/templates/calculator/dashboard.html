@@ -1,10 +1,12 @@
 <!-- # This file is part of AI ECO. # -->
-<!-- dashboard.html — personal emissions dashboard, aggregates prompt_emissions via ORM -->
+<!-- dashboard.html — personal emissions dashboard -->
+<!-- Aggregates prompt_emissions via Django ORM Sum annotation -->
 {% extends 'calculator/base.html' %}
 {% block title %}Dashboard — AIECO{% endblock %}
 {% block content %}
 <div style="max-width:1000px;margin:0 auto;padding:48px 24px 100px;position:relative;z-index:1;">
 
+  <!-- Page header with username greeting -->
   <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:36px;">
     <div>
       <div class="hero-pill" style="margin-bottom:12px;"><span class="hero-pill-dot"></span>Personal tracker</div>
@@ -16,17 +18,17 @@
     <a href="{% url 'calculate' %}" class="calc-btn" style="width:auto;padding:11px 24px;">New session</a>
   </div>
 
-  <!-- Budget exceeded warning banner -->
+  <!-- Budget exceeded warning — only shown when over_budget=True from views.py -->
   {% if over_budget %}
   <div style="background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.35);border-radius:14px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
     <div>
       <div style="font-weight:800;font-size:14px;color:#f87171;margin-bottom:2px;">Monthly budget exceeded</div>
-      <div style="font-size:13px;color:var(--muted);">You have used {{ pct_used }}% of your {{ budget }}g monthly CO2 budget. Consider switching to a lower-carbon model or region.</div>
+      <div style="font-size:13px;color:var(--muted);">You have used {{ pct_used }}% of your {{ budget }}g monthly CO2 budget.</div>
     </div>
   </div>
   {% endif %}
 
-  <!-- Summary stat cards -->
+  <!-- Summary metric cards — total CO2, session count, most used model -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px;">
     <div class="glass-panel">
       <div class="panel-body" style="text-align:center;padding:20px;">
@@ -53,7 +55,7 @@
     {% endif %}
   </div>
 
-  <!-- Budget progress bar -->
+  <!-- Monthly budget progress bar — colour shifts red when over 90% used -->
   {% if budget %}
   <div class="glass-panel" style="margin-bottom:20px;">
     <div class="panel-body">
@@ -62,15 +64,17 @@
         <span style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--muted);">{{ total_co2|floatformat:4 }}g / {{ budget }}g</span>
       </div>
       <div style="height:8px;background:var(--glass);border-radius:99px;overflow:hidden;">
-        <div style="height:100%;width:{{ pct_used }}%;max-width:100%;
+        <!-- bar-fill — width set by JavaScript to avoid Django template tags inside CSS -->
+        <div class="bar-fill" data-pct="{{ pct_used }}"
+          style="height:100%;width:0%;border-radius:99px;
           background:{% if pct_used > 90 %}linear-gradient(90deg,#7c3aed,#e53e3e){% else %}linear-gradient(90deg,var(--btn-from),var(--btn-to)){% endif %};
-          border-radius:99px;transition:width .5s;"></div>
+          transition:width .5s;"></div>
       </div>
     </div>
   </div>
   {% endif %}
 
-  <!-- Recent sessions list -->
+  <!-- Recent sessions list — last 10, ordered newest first -->
   <div class="glass-panel">
     <div class="panel-head">
       <div class="panel-head-icon">S</div>
@@ -82,6 +86,7 @@
     <div class="panel-body">
       {% if sessions %}
         {% for s in sessions %}
+        <!-- border-bottom removed on last row to avoid double border -->
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;
           border-bottom:1px solid var(--glass-border);flex-wrap:wrap;gap:8px;
           {% if forloop.last %}border-bottom:none;{% endif %}">
@@ -94,6 +99,7 @@
               {{ s.ai_model.model_name }} · {{ s.region.region_name }} · {{ s.created_at|date:"d M Y" }}
             </div>
           </div>
+          <!-- CO2 figure from linked prompt_emissions record via OneToOneField -->
           <div style="text-align:right;flex-shrink:0;">
             <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--accent);">
               {% if s.emissions %}{{ s.emissions.co2_mg|floatformat:4 }} mg{% else %}—{% endif %}
@@ -114,4 +120,11 @@
   </div>
 
 </div>
+
+<!-- Set progress bar widths from data-pct attributes — avoids Django template tags inside CSS width -->
+<script>
+document.querySelectorAll('.bar-fill').forEach(function(el) {
+  el.style.width = (el.getAttribute('data-pct') || 0) + '%';
+});
+</script>
 {% endblock %}
