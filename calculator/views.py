@@ -327,7 +327,7 @@ Keep responses concise, friendly and practical."""
         }).encode('utf-8')
 
         req = urllib.request.Request(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + api_key,
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=' + api_key,
             data=payload,
             headers={'Content-Type': 'application/json'},
             method='POST'
