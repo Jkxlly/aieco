@@ -175,6 +175,10 @@ def session_edit(request, pk):
         form = PromptSessionForm(request.POST, instance=session)
         if form.is_valid():
             form.save()
+            try:
+                session.emissions.save()
+            except PromptEmissions.DoesNotExist:
+                PromptEmissions.objects.create(session=session)
             return redirect('session_detail', pk=session.pk)
     else:
         form = PromptSessionForm(instance=session)
@@ -254,14 +258,15 @@ def forum_detail(request, pk):
         'post': post, 'comments': comments, 'form': form,
     })
 
+
 # ── EcoBot Chat API ───────────────────────────────────────────────────────────
 @csrf_exempt
 @require_POST
 def chat_api(request):
     """
-    Proxies chat messages to the Google Gemini API.
+    Proxies chat messages to the Google Gemini API using gemini-2.0-flash.
     The API key is stored as a server-side environment variable (GEMINI_API_KEY)
-    and never exposed to the browser. Gemini 1.5 Flash free tier used.
+    and never exposed to the browser. Gemini free tier used.
     Returns a JSON response with the assistant's reply.
     """
     print('EcoBot chat_api called')
@@ -327,9 +332,12 @@ Keep responses concise, friendly and practical."""
         }).encode('utf-8')
 
         req = urllib.request.Request(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=' + api_key,
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
             data=payload,
-            headers={'Content-Type': 'application/json'},
+            headers={
+                'Content-Type':  'application/json',
+                'x-goog-api-key': api_key,
+            },
             method='POST'
         )
 
