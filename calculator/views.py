@@ -259,9 +259,9 @@ def forum_detail(request, pk):
 @require_POST
 def chat_api(request):
     """
-    Proxies chat messages to the Groq API using Llama 3.
-    The API key is stored as a server-side environment variable (GROQ_API_KEY)
-    and never exposed to the browser. Groq free tier used to minimise cost.
+    Proxies chat messages to the Google Gemini API.
+    The API key is stored as a server-side environment variable (GEMINI_API_KEY)
+    and never exposed to the browser. Gemini 1.5 Flash free tier used.
     Returns a JSON response with the assistant's reply.
     """
     print('EcoBot chat_api called')
@@ -275,13 +275,13 @@ def chat_api(request):
         if not message:
             return JsonResponse({'error': 'No message provided'}, status=400)
 
-        api_key = os.environ.get('GROQ_API_KEY', '')
+        api_key = os.environ.get('GEMINI_API_KEY', '')
         print('EcoBot api_key found: ' + str(bool(api_key)))
 
         if not api_key:
             return JsonResponse({'reply': (
                 'EcoBot is not configured yet. '
-                'Please add GROQ_API_KEY to your Render environment variables.'
+                'Please add GEMINI_API_KEY to your Render environment variables.'
             )})
 
         import urllib.request
@@ -312,33 +312,32 @@ Top recommendations to reduce footprint:
 
 Keep responses concise, friendly and practical."""
 
-        messages_list = [{'role': 'system', 'content': system_prompt}]
+        # Build full prompt combining system prompt, history and current message
+        full_prompt = system_prompt + '\n\n'
         for h in history[:-1]:
-            if h.get('role') in ('user', 'assistant'):
-                messages_list.append({'role': h['role'], 'content': h['content']})
-        messages_list.append({'role': 'user', 'content': message})
+            if h.get('role') == 'user':
+                full_prompt += 'User: ' + h['content'] + '\n'
+            elif h.get('role') == 'assistant':
+                full_prompt += 'EcoBot: ' + h['content'] + '\n'
+        full_prompt += 'User: ' + message
 
         payload = json.dumps({
-            'model':      'llama-3.1-8b-instant',
-            'max_tokens': 600,
-            'messages':   messages_list,
+            'contents': [{'parts': [{'text': full_prompt}]}],
+            'generationConfig': {'maxOutputTokens': 600}
         }).encode('utf-8')
 
         req = urllib.request.Request(
-            'https://api.groq.com/openai/v1/chat/completions',
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + api_key,
             data=payload,
-            headers={
-                'Authorization': 'Bearer ' + api_key,
-                'Content-Type':  'application/json',
-            },
+            headers={'Content-Type': 'application/json'},
             method='POST'
         )
 
-        print('EcoBot sending request to Groq')
+        print('EcoBot sending request to Gemini')
         with urllib.request.urlopen(req, timeout=20) as resp:
             data = json.loads(resp.read().decode('utf-8'))
 
-        reply = data['choices'][0]['message']['content']
+        reply = data['candidates'][0]['content']['parts'][0]['text']
         print('EcoBot reply received: ' + reply[:50])
         return JsonResponse({'reply': reply})
 
