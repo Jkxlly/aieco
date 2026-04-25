@@ -314,7 +314,7 @@ Keep responses concise, friendly and practical."""
         messages_list.append({'role': 'user', 'content': message})
 
         payload = json.dumps({
-            'model':      'llama3-8b-8192',
+            'model':      'llama-3.1-8b-instant',
             'max_tokens': 600,
             'messages':   messages_list,
         }).encode('utf-8')
