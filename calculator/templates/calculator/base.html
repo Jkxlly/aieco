@@ -137,7 +137,7 @@ var sendBtn  = document.getElementById('ecobot-send');
 var msgs     = document.getElementById('ecobot-messages');
 var sugg     = document.getElementById('ecobot-suggestions');
 
-var history = [];
+var chatHistory = [];
 
 fab.addEventListener('click', function() {
   win.classList.toggle('open');
@@ -183,7 +183,7 @@ async function ecobotSend(text) {
 
   input.value = '';
   addMsg(text, 'user');
-  history.push({ role: 'user', content: text });
+ chatHistory.push({ role: 'user', content: text });
 
   showTyping();
   sendBtn.disabled = true;
@@ -192,14 +192,13 @@ async function ecobotSend(text) {
     var res = await fetch('/api/chat/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
-      body: JSON.stringify({ message: text, history: history.slice(-8) })
+      body: JSON.stringify({ message: text, history: chatHistory.slice(-8) })
     });
     var data = await res.json();
     hideTyping();
     var reply = data.reply || 'Sorry, I could not get a response. Please try again.';
     addMsg(reply, 'bot');
-    history.push({ role: 'assistant', content: reply });
-  } catch (err) {
+chatHistory.push({ role: 'assistant', content: reply });  } catch (err) {
     hideTyping();
     addMsg('Something went wrong. Please try again.', 'bot');
   } finally {
