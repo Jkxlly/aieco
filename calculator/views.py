@@ -255,7 +255,6 @@ def forum_detail(request, pk):
 
 # ── EcoBot Chat API ───────────────────────────────────────────────────────────
 @require_POST
-@csrf_protect
 def chat_api(request):
     """
     Proxies chat messages to the Groq API using Llama 3.
@@ -263,15 +262,20 @@ def chat_api(request):
     and never exposed to the browser. Groq free tier used to minimise cost.
     Returns a JSON response with the assistant's reply.
     """
+    print('EcoBot chat_api called')
     try:
         body    = json.loads(request.body)
         message = body.get('message', '').strip()
         history = body.get('history', [])
 
+        print('EcoBot message received: ' + message)
+
         if not message:
             return JsonResponse({'error': 'No message provided'}, status=400)
 
         api_key = os.environ.get('GROQ_API_KEY', '')
+        print('EcoBot api_key found: ' + str(bool(api_key)))
+
         if not api_key:
             return JsonResponse({'reply': (
                 'EcoBot is not configured yet. '
@@ -281,7 +285,6 @@ def chat_api(request):
         import urllib.request
         import traceback
 
-        # System prompt defines EcoBot role and AIECO methodology knowledge
         system_prompt = """You are EcoBot, the AI assistant for AIECO (aieco.uk).
 
 Your role:
@@ -307,7 +310,6 @@ Top recommendations to reduce footprint:
 
 Keep responses concise, friendly and practical."""
 
-        # Build message list — Groq uses OpenAI format with system message first
         messages_list = [{'role': 'system', 'content': system_prompt}]
         for h in history[:-1]:
             if h.get('role') in ('user', 'assistant'):
@@ -330,14 +332,16 @@ Keep responses concise, friendly and practical."""
             method='POST'
         )
 
+        print('EcoBot sending request to Groq')
         with urllib.request.urlopen(req, timeout=20) as resp:
             data = json.loads(resp.read().decode('utf-8'))
 
-        # Groq uses OpenAI response format — reply is in choices[0].message.content
         reply = data['choices'][0]['message']['content']
+        print('EcoBot reply received: ' + reply[:50])
         return JsonResponse({'reply': reply})
 
     except Exception as e:
+        import traceback
         print('EcoBot error: ' + str(e))
         print(traceback.format_exc())
         return JsonResponse({'reply': 'EcoBot error: ' + str(e)})
