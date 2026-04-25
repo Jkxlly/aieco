@@ -253,15 +253,14 @@ def forum_detail(request, pk):
         'post': post, 'comments': comments, 'form': form,
     })
 
-
 # ── EcoBot Chat API ───────────────────────────────────────────────────────────
 @require_POST
 @csrf_protect
 def chat_api(request):
     """
-    Proxies chat messages to the Anthropic Claude API.
-    The API key is stored as a server-side environment variable (ANTHROPIC_API_KEY)
-    and never exposed to the browser. Uses Claude Haiku to minimise API cost.
+    Proxies chat messages to the Groq API using Llama 3.
+    The API key is stored as a server-side environment variable (GROQ_API_KEY)
+    and never exposed to the browser. Groq free tier used to minimise cost.
     Returns a JSON response with the assistant's reply.
     """
     try:
@@ -272,16 +271,16 @@ def chat_api(request):
         if not message:
             return JsonResponse({'error': 'No message provided'}, status=400)
 
-        api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+        api_key = os.environ.get('GROQ_API_KEY', '')
         if not api_key:
             return JsonResponse({'reply': (
                 'EcoBot is not configured yet. '
-                'Please add ANTHROPIC_API_KEY to your Render environment variables.'
+                'Please add GROQ_API_KEY to your Render environment variables.'
             )})
 
         import urllib.request
 
-        # System prompt defines EcoBot's role and knowledge about AIECO methodology
+        # System prompt defines EcoBot role and AIECO methodology knowledge
         system_prompt = """You are EcoBot, the AI assistant for AIECO (aieco.uk).
 
 Your role:
@@ -307,27 +306,25 @@ Top recommendations to reduce footprint:
 
 Keep responses concise, friendly and practical."""
 
-        # Build message history for the API request (last 8 turns for context window)
-        messages_list = []
+        # Build message list — Groq uses OpenAI format with system message first
+        messages_list = [{'role': 'system', 'content': system_prompt}]
         for h in history[:-1]:
             if h.get('role') in ('user', 'assistant'):
                 messages_list.append({'role': h['role'], 'content': h['content']})
         messages_list.append({'role': 'user', 'content': message})
 
         payload = json.dumps({
-            'model':      'claude-haiku-4-5-20251001',
+            'model':      'llama3-8b-8192',
             'max_tokens': 600,
-            'system':     system_prompt,
             'messages':   messages_list,
         }).encode('utf-8')
 
         req = urllib.request.Request(
-            'https://api.anthropic.com/v1/messages',
+            'https://api.groq.com/openai/v1/chat/completions',
             data=payload,
             headers={
-                'x-api-key':          api_key,
-                'anthropic-version':  '2023-06-01',
-                'content-type':       'application/json',
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type':  'application/json',
             },
             method='POST'
         )
@@ -335,8 +332,10 @@ Keep responses concise, friendly and practical."""
         with urllib.request.urlopen(req, timeout=20) as resp:
             data = json.loads(resp.read().decode('utf-8'))
 
-        reply = data['content'][0]['text']
+        # Groq uses OpenAI response format — reply is in choices[0].message.content
+        reply = data['choices'][0]['message']['content']
         return JsonResponse({'reply': reply})
 
-    except Exception:
+    except Exception as e:
+        print(f"EcoBot error: {e}")
         return JsonResponse({'reply': 'Something went wrong. Please try again.'})
