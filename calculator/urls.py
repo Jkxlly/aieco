@@ -1,4 +1,3 @@
-# This file is part of AI ECO. #
 # urls.py — URL routing for the calculator app
 # Maps URL patterns to view functions defined in views.py
 

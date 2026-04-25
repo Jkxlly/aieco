@@ -1,4 +1,3 @@
-# This file is part of AI ECO. #
 # views.py — all view functions for the AIECO calculator application
 # Each view handles HTTP requests and returns an HTTP response or redirect
 

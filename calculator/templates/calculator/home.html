@@ -1,4 +1,3 @@
-<!-- # This file is part of AI ECO. # -->
 <!-- home.html — homepage hardware calculator, client-side calculation only, no database write -->
 {% extends 'calculator/base.html' %}
 {% block title %}Hardware Calculator — AIECO{% endblock %}
@@ -217,7 +216,7 @@ function hwCalculate() {
   var hours      = parseFloat(document.getElementById('hw-hours').value) || 1;
   var regionSel  = document.getElementById('hw-region');
 
-  /* Read reference values from data attributes — set by Django template */
+/* Read reference values from data attributes — set by Django template */
   var tdp        = parseFloat(hwSel.selectedOptions[0].dataset.tdp   || 0);
   var opMult     = parseFloat(opSel.selectedOptions[0].dataset.mult  || 1);
   var precFactor = parseFloat(precSel.selectedOptions[0].dataset.factor || 1);
