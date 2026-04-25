@@ -279,6 +279,7 @@ def chat_api(request):
             )})
 
         import urllib.request
+        import traceback
 
         # System prompt defines EcoBot role and AIECO methodology knowledge
         system_prompt = """You are EcoBot, the AI assistant for AIECO (aieco.uk).
@@ -323,7 +324,7 @@ Keep responses concise, friendly and practical."""
             'https://api.groq.com/openai/v1/chat/completions',
             data=payload,
             headers={
-                'Authorization': f'Bearer {api_key}',
+                'Authorization': 'Bearer ' + api_key,
                 'Content-Type':  'application/json',
             },
             method='POST'
@@ -337,5 +338,6 @@ Keep responses concise, friendly and practical."""
         return JsonResponse({'reply': reply})
 
     except Exception as e:
-        print(f"EcoBot error: {e}")
-        return JsonResponse({'reply': 'Something went wrong. Please try again.'})
+        print('EcoBot error: ' + str(e))
+        print(traceback.format_exc())
+        return JsonResponse({'reply': 'EcoBot error: ' + str(e)})
