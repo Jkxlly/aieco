@@ -130,6 +130,7 @@ def calculate(request):
     if request.method == 'POST':
         form = PromptSessionForm(request.POST)
         if form.is_valid():
+            session = form.save(commit=False)
             session.user = request.user
             session.save()
             PromptEmissions.objects.create(session=session)
