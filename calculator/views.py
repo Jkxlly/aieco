@@ -10,6 +10,7 @@ from django.db.models import Sum, Count
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 from .models import (
     AIModel, CarbonRegion, HardwareSpec, OperationType,
     PrecisionType, PromptSession, PromptEmissions,
@@ -254,6 +255,7 @@ def forum_detail(request, pk):
     })
 
 # ── EcoBot Chat API ───────────────────────────────────────────────────────────
+@csrf_exempt
 @require_POST
 def chat_api(request):
     """

@@ -209,14 +209,22 @@ async function ecobotSend(text) {
 }
 
 /* Read CSRF token from browser cookie for POST requests */
+
 function getCsrf() {
   var cookie = document.cookie.split(';').find(function(c) {
     return c.trim().startsWith('csrftoken=');
   });
-  return cookie ? cookie.split('=')[1] : '';
+  if (cookie) return cookie.split('=')[1];
+  var input = document.querySelector('[name=csrfmiddlewaretoken]');
+  return input ? input.value : '';
 }
+
 </script>
 
 {% block extra_js %}{% endblock %}
+
+<!-- Hidden form ensures CSRF cookie is always set on every page -->
+<form id="csrf-init" style="display:none;">{% csrf_token %}</form>
+
 </body>
 </html>
