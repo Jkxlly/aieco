@@ -62,9 +62,10 @@
         <span style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--muted);">{{ total_co2|floatformat:4 }}g / {{ budget }}g</span>
       </div>
       <div style="height:8px;background:var(--glass);border-radius:99px;overflow:hidden;">
-        <div style="height:100%;width:{{ pct_used }}%;max-width:100%;
-          background:{% if pct_used > 90 %}linear-gradient(90deg,#7c3aed,#e53e3e){% else %}linear-gradient(90deg,var(--btn-from),var(--btn-to)){% endif %};
-          border-radius:99px;transition:width .5s;"></div>
+        <div class="bar-fill" data-pct="{{ pct_used }}"
+     data-over="{% if pct_used > 90 %}1{% else %}0{% endif %}"
+     style="height:100%;width:0%;border-radius:99px;transition:width .5s;">
+</div>
       </div>
     </div>
   </div>
@@ -84,7 +85,7 @@
         {% for s in sessions %}
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;
           border-bottom:1px solid var(--glass-border);flex-wrap:wrap;gap:8px;
-          {% if forloop.last %}border-bottom:none;{% endif %}">
+      {% if forloop.last %}border-bottom:none;{% endif %}">
           <div style="flex:1;min-width:0;">
             <a href="{% url 'session_detail' s.pk %}"
                style="font-size:14px;font-weight:700;color:var(--text);display:block;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
@@ -114,4 +115,14 @@
   </div>
 
 </div>
+
+<script>
+document.querySelectorAll('.bar-fill').forEach(function(el) {
+  el.style.width = Math.min(el.getAttribute('data-pct') || 0, 100) + '%';
+  el.style.background = el.getAttribute('data-over') === '1'
+    ? 'linear-gradient(90deg,#7c3aed,#e53e3e)'
+    : 'linear-gradient(90deg,var(--btn-from),var(--btn-to))';
+});
+</script>
+
 {% endblock %}
