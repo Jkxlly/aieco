@@ -1,67 +1,111 @@
+<!-- # This file is part of AI ECO. # -->
+<!-- forum_detail.html — single forum post with comments thread -->
 {% extends 'calculator/base.html' %}
-{% block title %}{{ post.title }}{% endblock %}
+{% block title %}{{ post.title }} — AIECO Forum{% endblock %}
+
 {% block content %}
-<div class="container py-5">
-  <div class="row">
-    <div class="col-lg-8">
-      <a href="{% url 'forum_list' %}" class="btn btn-sm btn-outline-secondary mb-4">
-        <i class="bi bi-arrow-left me-1"></i>Back to Forum
-      </a>
-      <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-body p-5">
-          <div class="d-flex justify-content-between mb-3">
-            <span class="badge rounded-pill px-3
-              {% if post.tag == 'results' %}bg-success
-              {% elif post.tag == 'question' %}bg-primary
-              {% elif post.tag == 'tip' %}bg-warning text-dark
-              {% else %}bg-secondary{% endif %}">
-              {{ post.get_tag_display }}
-            </span>
-            <small class="text-muted">{{ post.created_at|date:"d M Y H:i" }}</small>
-          </div>
-          <h2 class="fw-bold mb-2">{{ post.title }}</h2>
-          <p class="text-muted small mb-4">
-            <i class="bi bi-person me-1"></i>{{ post.user.username }}
-          </p>
-          <div class="post-body">{{ post.body|linebreaks }}</div>
-        </div>
+<div style="max-width:860px;margin:0 auto;padding:48px 24px 100px;position:relative;z-index:1;">
+
+  <a href="{% url 'forum_list' %}"
+     style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;
+            color:var(--muted);margin-bottom:28px;transition:color .2s;"
+     onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+    Back to forum
+  </a>
+
+  <!-- Post card -->
+  <div class="glass-panel" style="margin-bottom:20px;">
+    <div class="panel-body">
+
+      <!-- Tag and date -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <span style="font-size:11px;font-weight:700;padding:4px 14px;border-radius:99px;
+          {% if post.tag == 'results' %}background:rgba(167,139,250,0.15);color:var(--accent);border:1px solid rgba(167,139,250,0.3);
+          {% elif post.tag == 'question' %}background:rgba(96,165,250,0.15);color:#60a5fa;border:1px solid rgba(96,165,250,0.3);
+          {% elif post.tag == 'tip' %}background:rgba(227,160,67,0.15);color:#e3a043;border:1px solid rgba(227,160,67,0.3);
+          {% else %}background:rgba(167,139,250,0.15);color:#a78bfa;border:1px solid rgba(167,139,250,0.3);{% endif %}">
+          {{ post.get_tag_display }}
+        </span>
+        <span style="font-size:12px;color:var(--muted);">{{ post.created_at|date:"d M Y, H:i" }}</span>
       </div>
 
-      <!-- Comments -->
-      <h5 class="fw-bold mb-3"><i class="bi bi-chat me-2" style="color:#3FB884;"></i>{{ comments.count }} Comment{{ comments.count|pluralize }}</h5>
-      {% for comment in comments %}
-      <div class="card border-0 shadow-sm rounded-3 mb-3">
-        <div class="card-body p-4">
-          <div class="d-flex justify-content-between mb-2">
-            <strong>{{ comment.user.username }}</strong>
-            <small class="text-muted">{{ comment.created_at|date:"d M Y H:i" }}</small>
-          </div>
-          <p class="mb-0">{{ comment.text }}</p>
-        </div>
-      </div>
-      {% empty %}
-      <p class="text-muted">No comments yet. Be the first!</p>
-      {% endfor %}
+      <!-- Post title -->
+      <h1 style="font-size:clamp(20px,3vw,30px);font-weight:900;letter-spacing:-0.5px;margin-bottom:12px;line-height:1.3;">
+        {{ post.title }}
+      </h1>
 
-      {% if user.is_authenticated %}
-      <div class="card border-0 shadow-sm rounded-3 mt-4">
-        <div class="card-body p-4">
-          <h6 class="fw-bold mb-3">Leave a reply</h6>
-          <form method="post">
-            {% csrf_token %}
-            {{ form.text }}
-            <button type="submit" class="btn btn-success mt-3">
-              <i class="bi bi-send me-1"></i>Post Reply
-            </button>
-          </form>
-        </div>
+      <!-- Author -->
+      <div style="font-size:13px;color:var(--muted);margin-bottom:18px;">
+        Posted by <strong style="color:var(--accent);">{{ post.user.username }}</strong>
       </div>
-      {% else %}
-      <div class="alert alert-light border mt-4">
-        <a href="{% url 'login' %}" class="text-success fw-semibold">Log in</a> to leave a comment.
+
+      <!-- Post body -->
+      <div style="font-size:14px;line-height:1.8;color:var(--text);white-space:pre-wrap;border-top:1px solid var(--glass-border);padding-top:18px;">{{ post.body }}</div>
+
+      <!-- Likes -->
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--glass-border);
+                  display:flex;align-items:center;gap:8px;">
+        <span style="font-size:12px;color:var(--muted);">{{ post.likes }} like{{ post.likes|pluralize }}</span>
       </div>
-      {% endif %}
+
     </div>
   </div>
+
+  <!-- Comments section -->
+  <h2 style="font-size:18px;font-weight:800;margin-bottom:14px;color:var(--text);">
+    Comments
+    <span style="font-size:13px;font-weight:400;color:var(--muted);margin-left:8px;">{{ comments|length }} comment{{ comments|length|pluralize }}</span>
+  </h2>
+
+  {% if comments %}
+    {% for comment in comments %}
+    <div class="glass-panel" style="margin-bottom:12px;">
+      <div class="panel-body" style="padding:16px 20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <strong style="font-size:13px;color:var(--accent);">{{ comment.user.username }}</strong>
+          <span style="font-size:11px;color:var(--muted);">{{ comment.created_at|date:"d M Y, H:i" }}</span>
+        </div>
+        <p style="font-size:13px;line-height:1.7;color:var(--text);margin:0;white-space:pre-wrap;">{{ comment.text }}</p>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div style="text-align:center;padding:32px 20px;color:var(--muted);font-size:14px;">
+      No comments yet — be the first to reply below.
+    </div>
+  {% endif %}
+
+  <!-- Add comment form -->
+  {% if user.is_authenticated %}
+  <div class="glass-panel" style="margin-top:24px;">
+    <div class="panel-head">
+      <div class="panel-head-icon">C</div>
+      <div>
+        <h2>Add a comment</h2>
+        <p>Replying as {{ user.username }}</p>
+      </div>
+    </div>
+    <div class="panel-body">
+      <form method="post" action="{% url 'forum_detail' post.pk %}">
+        {% csrf_token %}
+        <div class="field">
+          <label class="field-label">Your comment</label>
+          {{ form.text }}
+        </div>
+        <button type="submit" class="calc-btn">Post comment</button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <div class="glass-panel" style="margin-top:24px;">
+    <div class="panel-body" style="text-align:center;padding:24px;">
+      <p style="font-size:14px;color:var(--muted);margin-bottom:14px;">Log in to leave a comment</p>
+      <a href="{% url 'login' %}" class="calc-btn" style="width:auto;padding:10px 24px;display:inline-block;font-size:13px;">
+        Log in
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
 {% endblock %}
