@@ -55,7 +55,7 @@
         <!-- AI Model dropdown — populated from ai_model database table -->
         <div class="field">
           <label class="field-label">AI Model</label>
-          <select id="hw-model" onchange="hwCalculate()">
+          <select id="hw-model">
             {% for m in ai_models %}
             <option value="{{ m.id }}"
               data-wh="{{ m.wh_per_token }}"
@@ -69,7 +69,7 @@
         <!-- Operation type — multiplier applied to base energy calculation -->
         <div class="field">
           <label class="field-label">Operation Type</label>
-          <select id="hw-op" onchange="hwCalculate()">
+          <select id="hw-op">
             {% for op in operations %}
             <option value="{{ op.id }}" data-mult="{{ op.energy_mult }}">
               {{ op.name }} (x{{ op.energy_mult }})
@@ -81,7 +81,7 @@
         <!-- Hardware spec — TDP in watts from hardware_spec table -->
         <div class="field">
           <label class="field-label">Hardware</label>
-          <select id="hw-hardware" onchange="hwCalculate()">
+          <select id="hw-hardware">
             {% for h in hardware_list %}
             <option value="{{ h.id }}" data-tdp="{{ h.tdp_watts }}" data-name="{{ h.name }}">
               {{ h.name }} ({{ h.tdp_watts }}W)
@@ -100,7 +100,6 @@
             </span>
           </div>
           <input type="range" id="hw-gpus" min="1" max="512" value="8" step="1"
-            oninput="document.getElementById('gpu-val').textContent=this.value;hwCalculate()"
             style="width:100%;accent-color:var(--accent);height:4px;cursor:pointer;">
           <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px;">
             <span>1</span><span>128</span><span>512</span>
@@ -110,7 +109,7 @@
         <!-- Precision format — energy reduction factor from precision_type table -->
         <div class="field">
           <label class="field-label">Precision Format</label>
-          <select id="hw-precision" onchange="hwCalculate()">
+          <select id="hw-precision">
             {% for p in precision_types %}
             <option value="{{ p.id }}" data-factor="{{ p.energy_factor }}">
               {{ p.name }}
@@ -123,13 +122,13 @@
         <div class="field">
           <label class="field-label">Duration (hours)</label>
           <input type="number" id="hw-hours" value="24" min="0.1" step="0.5"
-            oninput="hwCalculate()" placeholder="24">
+            style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--glass-border);">
         </div>
 
         <!-- Region — carbon intensity kg/kWh from carbon_region table -->
         <div class="field" style="margin-bottom:0;">
           <label class="field-label">Region</label>
-          <select id="hw-region" onchange="hwCalculate()">
+          <select id="hw-region">
             {% for r in regions %}
             <option value="{{ r.id }}"
               data-ci="{{ r.carbon_intensity_kg_kwh }}"
@@ -291,8 +290,5 @@ function hwCalculate() {
       '</div>'
     ) : '');
 }
-
-/* Run calculation on page load so results panel is not empty */
-document.addEventListener('DOMContentLoaded', hwCalculate);
 </script>
 {% endblock %}
