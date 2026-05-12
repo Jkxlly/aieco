@@ -264,7 +264,7 @@ def forum_detail(request, pk):
 @require_POST
 def chat_api(request):
     """
-    Proxies chat messages to the Google Gemini API using gemini-2.0-flash.
+    Proxies chat messages to the Google Gemini API using gemini-2.5-flash.
     The API key is stored as a server-side environment variable (GEMINI_API_KEY)
     and never exposed to the browser. Gemini free tier used.
     Returns a JSON response with the assistant's reply.
@@ -330,7 +330,7 @@ Keep responses concise, friendly and practical."""
         }).encode('utf-8')
 
         req = urllib.request.Request(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
             data=payload,
             headers={
                 'Content-Type':  'application/json',
