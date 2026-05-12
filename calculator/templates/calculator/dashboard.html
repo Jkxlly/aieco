@@ -18,9 +18,9 @@
 
   <!-- Budget exceeded warning banner -->
   {% if over_budget %}
-  <div style="background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.35);border-radius:14px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+  <div style="background:var(--eco-high-bg);border:1px solid var(--eco-high-border);border-radius:14px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
     <div>
-      <div style="font-weight:800;font-size:14px;color:#f87171;margin-bottom:2px;">Monthly budget exceeded</div>
+      <div style="font-weight:800;font-size:14px;color:var(--eco-high);margin-bottom:2px;">Monthly budget exceeded</div>
       <div style="font-size:13px;color:var(--muted);">You have used {{ pct_used }}% of your {{ budget }}g monthly CO2 budget. Consider switching to a lower-carbon model or region.</div>
     </div>
   </div>
@@ -61,11 +61,8 @@
         <span style="font-size:13px;font-weight:700;color:var(--text);">Monthly CO2 budget</span>
         <span style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--muted);">{{ total_co2|floatformat:4 }}g / {{ budget }}g</span>
       </div>
-      <div style="height:8px;background:var(--glass);border-radius:99px;overflow:hidden;">
-        <div class="bar-fill" data-pct="{{ pct_used }}"
-     data-over="{% if pct_used > 90 %}1{% else %}0{% endif %}"
-     style="height:100%;width:0%;border-radius:99px;transition:width .5s;">
-</div>
+      <div class="eco-bar">
+        <div class="eco-bar-fill" data-pct="{{ pct_used }}" style="width:0%;"></div>
       </div>
     </div>
   </div>
@@ -95,10 +92,21 @@
               {{ s.ai_model.model_name }} · {{ s.region.region_name }} · {{ s.created_at|date:"d M Y" }}
             </div>
           </div>
-          <div style="text-align:right;flex-shrink:0;">
-            <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--accent);">
-              {% if s.emissions %}{{ s.emissions.co2_mg|floatformat:4 }} mg{% else %}—{% endif %}
-            </div>
+          <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+            {% if s.emissions %}
+              {% if s.emissions.co2_mg < 1 %}
+                <span class="eco-badge eco-low">Low</span>
+              {% elif s.emissions.co2_mg < 10 %}
+                <span class="eco-badge eco-med">Med</span>
+              {% else %}
+                <span class="eco-badge eco-high">High</span>
+              {% endif %}
+              <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--text);">
+                {{ s.emissions.co2_mg|floatformat:4 }} mg
+              </div>
+            {% else %}
+              <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--muted);">—</div>
+            {% endif %}
             <div style="font-size:11px;color:var(--muted);">CO2e</div>
           </div>
         </div>
@@ -117,11 +125,8 @@
 </div>
 
 <script>
-document.querySelectorAll('.bar-fill').forEach(function(el) {
-  el.style.width = Math.min(el.getAttribute('data-pct') || 0, 100) + '%';
-  el.style.background = el.getAttribute('data-over') === '1'
-    ? 'linear-gradient(90deg,#7c3aed,#e53e3e)'
-    : 'linear-gradient(90deg,var(--btn-from),var(--btn-to))';
+document.querySelectorAll('.eco-bar-fill').forEach(function(el) {
+  el.style.width = Math.min(parseFloat(el.getAttribute('data-pct')) || 0, 100) + '%';
 });
 </script>
 

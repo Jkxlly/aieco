@@ -24,9 +24,15 @@
             <div style="font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.5;">
               {{ s.prompt_text|truncatechars:120 }}
             </div>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--muted);">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px;color:var(--muted);">
               <span style="padding:3px 10px;border-radius:99px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2);color:var(--accent);">{{ s.ai_model.model_name }}</span>
-              <span>{{ s.region.region_name }}</span>
+              {% if s.region.carbon_intensity_kg_kwh < 0.1 %}
+                <span class="eco-badge eco-low">{{ s.region.region_name }}</span>
+              {% elif s.region.carbon_intensity_kg_kwh < 0.4 %}
+                <span class="eco-badge eco-med">{{ s.region.region_name }}</span>
+              {% else %}
+                <span class="eco-badge eco-high">{{ s.region.region_name }}</span>
+              {% endif %}
               <span>{{ s.created_at|date:"d M Y, H:i" }}</span>
             </div>
           </div>

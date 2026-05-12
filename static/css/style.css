@@ -30,6 +30,15 @@
   --shadow-lg:     0 20px 60px rgba(124,58,237,0.3);
   --footer-bg:     rgba(13,10,30,0.9);
   --scrollbar:     rgba(138,92,246,0.3);
+  --eco-low:       #10b981;
+  --eco-low-bg:    rgba(16,185,129,0.12);
+  --eco-low-border:rgba(16,185,129,0.35);
+  --eco-med:       #f59e0b;
+  --eco-med-bg:    rgba(245,158,11,0.12);
+  --eco-med-border:rgba(245,158,11,0.35);
+  --eco-high:      #ef4444;
+  --eco-high-bg:   rgba(239,68,68,0.12);
+  --eco-high-border:rgba(239,68,68,0.35);
   color-scheme: dark;
 }
 
@@ -62,6 +71,15 @@
   --shadow-lg:     0 20px 60px rgba(124,58,237,0.18);
   --footer-bg:     rgba(245,240,255,0.95);
   --scrollbar:     rgba(124,58,237,0.25);
+  --eco-low:       #059669;
+  --eco-low-bg:    rgba(5,150,105,0.1);
+  --eco-low-border:rgba(5,150,105,0.3);
+  --eco-med:       #d97706;
+  --eco-med-bg:    rgba(217,119,6,0.1);
+  --eco-med-border:rgba(217,119,6,0.3);
+  --eco-high:      #dc2626;
+  --eco-high-bg:   rgba(220,38,38,0.1);
+  --eco-high-border:rgba(220,38,38,0.3);
   color-scheme: light;
 }
 
@@ -369,6 +387,35 @@ main { position: relative; z-index: 1; }
   font-size: 13px; transition: opacity 0.2s;
 }
 #ecobot-send:hover { opacity: 0.85; }
+
+/* ── Eco semantic colours (emissions data) ── */
+.eco-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 99px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; font-family: 'JetBrains Mono', monospace;
+  border: 1px solid transparent;
+}
+.eco-badge::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
+}
+.eco-low  { color: var(--eco-low);  background: var(--eco-low-bg);  border-color: var(--eco-low-border); }
+.eco-med  { color: var(--eco-med);  background: var(--eco-med-bg);  border-color: var(--eco-med-border); }
+.eco-high { color: var(--eco-high); background: var(--eco-high-bg); border-color: var(--eco-high-border); }
+
+.eco-bar {
+  width: 100%; height: 8px; border-radius: 99px;
+  background: var(--glass); overflow: hidden;
+}
+.eco-bar-fill {
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, var(--eco-low), var(--eco-med) 60%, var(--eco-high));
+  transition: width 0.4s ease;
+}
+.eco-text-low  { color: var(--eco-low); }
+.eco-text-med  { color: var(--eco-med); }
+.eco-text-high { color: var(--eco-high); }
 
 @media (max-width: 640px) {
   .equiv-grid { grid-template-columns: repeat(2,1fr); }
