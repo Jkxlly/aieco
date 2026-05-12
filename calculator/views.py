@@ -339,20 +339,40 @@ Keep responses concise, friendly and practical."""
             method='POST'
         )
 
-        try:
-            with urllib.request.urlopen(req, timeout=20) as resp:
-                data = json.loads(resp.read().decode('utf-8'))
-        except urllib.error.HTTPError as http_err:
-            body = http_err.read().decode('utf-8', errors='replace')
-            logger.error('Gemini HTTP %s: %s', http_err.code, body)
-            if http_err.code == 429:
+        import time
+        data = None
+        last_err = None
+        for attempt in range(3):
+            try:
+                with urllib.request.urlopen(req, timeout=20) as resp:
+                    data = json.loads(resp.read().decode('utf-8'))
+                break
+            except urllib.error.HTTPError as http_err:
+                body = http_err.read().decode('utf-8', errors='replace')
+                logger.error('Gemini HTTP %s (attempt %s): %s', http_err.code, attempt + 1, body)
+                last_err = http_err
+                if http_err.code in (500, 502, 503, 504) and attempt < 2:
+                    time.sleep(1.5 * (attempt + 1))
+                    continue
+                if http_err.code == 429:
+                    return JsonResponse({'reply': (
+                        "EcoBot is taking a quick break — the AI service is busy "
+                        "or has hit its daily limit. Please try again in a few minutes."
+                    )})
+                if http_err.code in (500, 502, 503, 504):
+                    return JsonResponse({'reply': (
+                        "EcoBot is temporarily unavailable — the AI service is "
+                        "experiencing high demand. Please try again in a moment."
+                    )})
                 return JsonResponse({'reply': (
-                    "EcoBot is taking a quick break — the AI service is busy "
-                    "or has hit its daily limit. Please try again in a few minutes."
+                    "EcoBot couldn't reach the AI service right now. "
+                    "Please try again shortly."
                 )})
+
+        if data is None:
+            logger.error('Gemini no data after retries: %s', last_err)
             return JsonResponse({'reply': (
-                "EcoBot couldn't reach the AI service right now. "
-                "Please try again shortly."
+                "EcoBot is temporarily unavailable. Please try again in a moment."
             )})
 
         reply = data['candidates'][0]['content']['parts'][0]['text']
