@@ -269,19 +269,15 @@ def chat_api(request):
     and never exposed to the browser. Gemini free tier used.
     Returns a JSON response with the assistant's reply.
     """
-    print('EcoBot chat_api called')
     try:
         body    = json.loads(request.body)
         message = body.get('message', '').strip()
         history = body.get('history', [])
 
-        print('EcoBot message received: ' + message)
-
         if not message:
             return JsonResponse({'error': 'No message provided'}, status=400)
 
         api_key = os.environ.get('GEMINI_API_KEY', '')
-        print('EcoBot api_key found: ' + str(bool(api_key)))
 
         if not api_key:
             return JsonResponse({'reply': (
@@ -290,7 +286,9 @@ def chat_api(request):
             )})
 
         import urllib.request
-        import traceback
+        import urllib.error
+        import logging
+        logger = logging.getLogger(__name__)
 
         system_prompt = """You are EcoBot, the AI assistant for AIECO (aieco.uk).
 
@@ -341,16 +339,27 @@ Keep responses concise, friendly and practical."""
             method='POST'
         )
 
-        print('EcoBot sending request to Gemini')
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+        except urllib.error.HTTPError as http_err:
+            body = http_err.read().decode('utf-8', errors='replace')
+            logger.error('Gemini HTTP %s: %s', http_err.code, body)
+            if http_err.code == 429:
+                return JsonResponse({'reply': (
+                    "EcoBot is taking a quick break — the AI service is busy "
+                    "or has hit its daily limit. Please try again in a few minutes."
+                )})
+            return JsonResponse({'reply': (
+                "EcoBot couldn't reach the AI service right now. "
+                "Please try again shortly."
+            )})
 
         reply = data['candidates'][0]['content']['parts'][0]['text']
-        print('EcoBot reply received: ' + reply[:50])
         return JsonResponse({'reply': reply})
 
-    except Exception as e:
-        import traceback
-        print('EcoBot error: ' + str(e))
-        print(traceback.format_exc())
-        return JsonResponse({'reply': 'EcoBot error: ' + str(e)})
+    except Exception:
+        logger.exception('EcoBot unexpected error')
+        return JsonResponse({'reply': (
+            "EcoBot ran into an unexpected error. Please try again shortly."
+        )})
