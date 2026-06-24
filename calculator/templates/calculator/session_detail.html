@@ -19,21 +19,34 @@
   </div>
 
   {% if session.emissions %}
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;">
     <div class="metric-card" style="background:var(--card-pink);">
       <div class="metric-label">Tokens</div>
       <div class="metric-value">{{ session.emissions.token_count }}</div>
-      <div class="metric-sub">estimated</div>
+      <div class="metric-sub">{{ session.emissions.input_tokens }} in · {{ session.emissions.output_tokens }} out (est.)</div>
     </div>
     <div class="metric-card" style="background:var(--card-green);">
-      <div class="metric-label">CO2e</div>
+      <div class="metric-label">CO2e (central)</div>
       <div class="metric-value" style="color:var(--accent);">{{ session.emissions.co2_mg|floatformat:4 }} mg</div>
       <div class="metric-sub">{{ session.emissions.co2_grams|floatformat:8 }} g</div>
     </div>
     <div class="metric-card" style="background:var(--card-blue);">
       <div class="metric-label">Energy</div>
       <div class="metric-value">{{ session.emissions.energy_wh|floatformat:8 }}</div>
-      <div class="metric-sub">watt-hours</div>
+      <div class="metric-sub">watt-hours · PUE {{ session.emissions.pue }}</div>
+    </div>
+  </div>
+
+  <!-- Uncertainty range — central estimate is one point in a band, not an exact value -->
+  <div class="glass-panel" style="margin-bottom:20px;">
+    <div class="panel-body" style="display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;justify-content:center;">
+      <span style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Likely range</span>
+      <span style="font-size:15px;font-weight:800;">
+        {{ session.emissions.co2_grams_low|floatformat:8 }}
+        &nbsp;–&nbsp;
+        {{ session.emissions.co2_grams_high|floatformat:8 }} g CO2e
+      </span>
+      <a href="{% url 'methodology' %}" style="font-size:11px;color:var(--accent);">how is this calculated?</a>
     </div>
   </div>
   {% endif %}

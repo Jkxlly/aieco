@@ -1,0 +1,40 @@
+<!-- open_data.html — open dataset landing page with CSV/JSON downloads. -->
+{% extends 'calculator/base.html' %}
+{% block title %}Open Data — AIECO{% endblock %}
+{% block content %}
+<div style="max-width:880px;margin:0 auto;padding:48px 24px 100px;position:relative;z-index:1;">
+
+  <h1 style="font-size:clamp(24px,5vw,40px);font-weight:900;letter-spacing:-1px;margin-bottom:10px;">Open Data</h1>
+  <p style="font-size:15px;line-height:1.7;color:var(--muted);max-width:680px;">
+    Every reference table behind the calculator is open and free to reuse under
+    <strong>CC-BY-4.0</strong> — just credit <em>AIECO (aieco.uk)</em>. Download as CSV
+    for spreadsheets or JSON for code. See the
+    <a href="{% url 'methodology' %}" style="color:var(--accent);">methodology</a> for how the figures are derived.
+  </p>
+
+  <div style="display:flex;flex-direction:column;gap:12px;margin-top:28px;">
+    {% for t in tables %}
+    <div class="glass-panel">
+      <div class="panel-body" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+        <div>
+          <h2 style="font-size:16px;font-weight:800;margin-bottom:4px;">{{ t.label }}</h2>
+          <p style="font-size:12px;color:var(--muted);">
+            {{ t.count }} record{{ t.count|pluralize }} · {{ t.fields|length }} fields
+          </p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <a href="{% url 'data_download' t.key 'csv' %}"
+             style="padding:9px 18px;border-radius:10px;background:var(--glass);border:1px solid var(--glass-border);color:var(--text);font-weight:700;font-size:13px;">CSV</a>
+          <a href="{% url 'data_download' t.key 'json' %}"
+             style="padding:9px 18px;border-radius:10px;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.25);color:var(--accent);font-weight:700;font-size:13px;">JSON</a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <p style="font-size:12px;color:var(--muted);opacity:.7;margin-top:24px;">
+    Citation: AIECO (2026). <em>AI energy &amp; carbon reference dataset</em>. aieco.uk. CC-BY-4.0.
+  </p>
+</div>
+{% endblock %}

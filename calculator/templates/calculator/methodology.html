@@ -1,0 +1,147 @@
+<!-- methodology.html — public, transparent documentation of the estimation method.
+     Generated from calculator/methodology.py and the live reference tables. -->
+{% extends 'calculator/base.html' %}
+{% block title %}Methodology — AIECO{% endblock %}
+{% block content %}
+<div style="max-width:920px;margin:0 auto;padding:48px 24px 100px;position:relative;z-index:1;">
+
+  <h1 style="font-size:clamp(24px,5vw,40px);font-weight:900;letter-spacing:-1px;margin-bottom:10px;">Methodology</h1>
+  <p style="font-size:15px;line-height:1.7;color:var(--muted);max-width:680px;">
+    AIECO estimates the energy and carbon footprint of AI usage from peer-reviewed
+    research. Every figure below is an <strong>estimate, not a measurement</strong>,
+    and every assumption is stated openly so the numbers can be checked and challenged.
+  </p>
+
+  <!-- ── The pipeline ──────────────────────────────────────────────────── -->
+  <div class="glass-panel" style="margin:28px 0 16px;">
+    <div class="panel-head"><div class="panel-head-icon">1</div><div><h2>The estimation pipeline</h2></div></div>
+    <div class="panel-body" style="font-size:14px;line-height:1.8;color:var(--muted);">
+      <ol style="padding-left:20px;display:flex;flex-direction:column;gap:10px;">
+        <li><strong>Words → tokens.</strong> Prompt word count × <strong>{{ tokens_per_word }}</strong> tokens/word
+            (modern sub-word tokenisers average 1.2–1.5×).</li>
+        <li><strong>Input vs output.</strong> Output tokens are estimated at
+            <strong>{{ output_ratio }}×</strong> the input count. Inference has two phases —
+            parallel <em>prefill</em> of the prompt and sequential <em>decode</em> of the response;
+            decode dominates energy, so each input token is weighted at only
+            <strong>{{ input_energy_weight }}×</strong> a decode token.</li>
+        <li><strong>Tokens → energy.</strong> Effective tokens × the model's Wh-per-token figure,
+            then multiplied by a data-centre overhead (PUE) of <strong>{{ pue }}</strong>.</li>
+        <li><strong>Energy → CO₂.</strong> Energy (kWh) × the grid carbon intensity of the
+            selected region (kg CO₂e/kWh).</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ── Worked example ────────────────────────────────────────────────── -->
+  <div class="glass-panel" style="margin-bottom:16px;">
+    <div class="panel-head"><div class="panel-head-icon">2</div><div><h2>Worked example</h2></div></div>
+    <div class="panel-body" style="font-size:14px;line-height:1.9;color:var(--muted);">
+      A 100-word prompt to a mid-range model (0.000003 Wh/token) on the UK grid (0.207 kg/kWh):
+      <ul style="padding-left:20px;margin-top:8px;">
+        <li>Input tokens: <strong>{{ example.input_tokens }}</strong> · estimated output tokens: <strong>{{ example.output_tokens }}</strong></li>
+        <li>Energy: <strong>{{ example.energy_wh|floatformat:8 }} Wh</strong> (incl. PUE {{ example.pue }})</li>
+        <li>Central estimate: <strong style="color:var(--accent);">{{ example.co2_grams|floatformat:8 }} g CO₂e</strong></li>
+        <li>Likely range: <strong>{{ example.co2_grams_low|floatformat:8 }} – {{ example.co2_grams_high|floatformat:8 }} g</strong></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ── Uncertainty ───────────────────────────────────────────────────── -->
+  <div class="glass-panel" style="margin-bottom:16px;">
+    <div class="panel-head"><div class="panel-head-icon">3</div><div><h2>Uncertainty (±{{ combined_uncertainty }}%)</h2></div></div>
+    <div class="panel-body" style="font-size:14px;line-height:1.7;color:var(--muted);">
+      <p style="margin-bottom:10px;">
+        We never present a single number as exact. The estimate is the product of several
+        uncertain factors whose relative uncertainties are combined in quadrature. The
+        energy-per-token term dominates because vendors do not publish per-token energy for
+        proprietary models.
+      </p>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead><tr style="text-align:left;color:var(--text);">
+          <th style="padding:6px 8px;">Factor</th><th style="padding:6px 8px;">Relative uncertainty</th>
+        </tr></thead>
+        <tbody>
+          {% for factor, value in uncertainty.items %}
+          <tr style="border-top:1px solid var(--glass-border);">
+            <td style="padding:6px 8px;">{{ factor }}</td>
+            <td style="padding:6px 8px;">±{{ value }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Sources ───────────────────────────────────────────────────────── -->
+  <div class="glass-panel" style="margin-bottom:16px;">
+    <div class="panel-head"><div class="panel-head-icon">4</div><div><h2>Primary sources</h2></div></div>
+    <div class="panel-body" style="font-size:13px;line-height:1.8;color:var(--muted);">
+      <ul style="padding-left:20px;">
+        <li>Samsi et al. (2023) — <em>From Words to Watts</em>: LLM inference energy benchmarking.</li>
+        <li>Patterson et al. (2021) — Carbon emissions of large neural network training.</li>
+        <li>Faiz et al. (2024) — <em>LLMCarbon</em>: operational + embodied carbon modelling.</li>
+        <li>Luccioni et al. (2023) — BLOOM lifecycle carbon assessment.</li>
+        <li>Grid intensities — National Grid ESO, EPA eGRID, IEA, EEA (2024); mlco2/impact dataset.</li>
+      </ul>
+      <p style="margin-top:12px;">
+        The full reference dataset is open and downloadable on the
+        <a href="{% url 'open_data' %}" style="color:var(--accent);">Data</a> page (CC-BY-4.0).
+      </p>
+    </div>
+  </div>
+
+  <!-- ── Reference data tables ─────────────────────────────────────────── -->
+  <div class="glass-panel" style="margin-bottom:16px;">
+    <div class="panel-head"><div class="panel-head-icon">5</div><div><h2>Carbon intensity by region</h2></div></div>
+    <div class="panel-body" style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;color:var(--muted);">
+        <thead><tr style="text-align:left;color:var(--text);">
+          <th style="padding:6px 8px;">Region</th><th style="padding:6px 8px;">kg CO₂e/kWh</th>
+          <th style="padding:6px 8px;">Year</th><th style="padding:6px 8px;">Source</th>
+        </tr></thead>
+        <tbody>
+          {% for r in regions %}
+          <tr style="border-top:1px solid var(--glass-border);">
+            <td style="padding:6px 8px;">{{ r.region_name }}</td>
+            <td style="padding:6px 8px;">{{ r.carbon_intensity_kg_kwh }}</td>
+            <td style="padding:6px 8px;">{{ r.year_recorded }}</td>
+            <td style="padding:6px 8px;">{{ r.source }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="glass-panel" style="margin-bottom:16px;">
+    <div class="panel-head"><div class="panel-head-icon">6</div><div><h2>AI model energy figures</h2></div></div>
+    <div class="panel-body" style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;color:var(--muted);">
+        <thead><tr style="text-align:left;color:var(--text);">
+          <th style="padding:6px 8px;">Model</th><th style="padding:6px 8px;">Provider</th>
+          <th style="padding:6px 8px;">Wh/token</th><th style="padding:6px 8px;">Type</th>
+        </tr></thead>
+        <tbody>
+          {% for m in models %}
+          <tr style="border-top:1px solid var(--glass-border);">
+            <td style="padding:6px 8px;">{{ m.model_name }}</td>
+            <td style="padding:6px 8px;">{{ m.provider }}</td>
+            <td style="padding:6px 8px;">{{ m.wh_per_token }}</td>
+            <td style="padding:6px 8px;">{{ m.get_model_type_display }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p style="font-size:12px;margin-top:10px;opacity:.7;">
+        Per-token energy for closed models is inferred from comparable open-model benchmarks
+        and is the largest source of uncertainty — treat cross-provider comparisons as indicative.
+      </p>
+    </div>
+  </div>
+
+  <p style="font-size:12px;color:var(--muted);opacity:.6;margin-top:24px;text-align:center;">
+    Found an error or have a better source? Open a discussion on the
+    <a href="{% url 'forum_list' %}" style="color:var(--accent);">forum</a> — corrections are welcome.
+  </p>
+</div>
+{% endblock %}

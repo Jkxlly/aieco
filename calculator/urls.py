@@ -13,6 +13,13 @@ urlpatterns = [
     path('login/',                    views.login_view,       name='login'),
     path('logout/',                   views.logout_view,      name='logout'),
 
+    # Methodology — public, transparent documentation of every assumption
+    path('methodology/',              views.methodology_view, name='methodology'),
+
+    # Open data — CC-BY dataset landing page + downloads
+    path('data/',                     views.open_data,        name='open_data'),
+    path('data/<str:table>.<str:fmt>', views.data_download,   name='data_download'),
+
     # Personal dashboard — aggregates monthly emissions data
     path('dashboard/',                views.dashboard,        name='dashboard'),
 

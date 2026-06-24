@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
 from django.db.models import Sum, Count
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
@@ -17,8 +17,10 @@ from .models import (
     ForumPost, ForumComment
 )
 from .forms import RegisterForm, PromptSessionForm, ForumPostForm, ForumCommentForm
+from . import methodology as method
 import json
 import os
+import csv
 
 
 # ── Homepage ──────────────────────────────────────────────────────────────────
@@ -37,6 +39,122 @@ def home(request):
         'operations':      OperationType.objects.all().order_by('energy_mult'),
         'precision_types': PrecisionType.objects.all().order_by('energy_factor'),
     })
+
+
+# ── Methodology ─────────────────────────────────────────────────────────────
+def methodology_view(request):
+    """
+    Public methodology page. Renders every assumption, formula and data source
+    used by the calculator, generated from the same constants module and the
+    same database tables the calculator actually uses — so it can never drift
+    out of sync with the real computation. This transparency is what makes the
+    estimates defensible to reviewers and funders.
+    """
+    # Worked example so readers can follow the numbers end to end.
+    example = method.estimate_emissions(
+        word_count              = 100,
+        wh_per_token            = 0.0000030,   # a mid-range model
+        carbon_intensity_kg_kwh = 0.207,       # UK grid
+    )
+    return render(request, 'calculator/methodology.html', {
+        'tokens_per_word':    method.TOKENS_PER_WORD,
+        'input_energy_weight':method.INPUT_ENERGY_WEIGHT,
+        'output_ratio':       method.DEFAULT_OUTPUT_RATIO,
+        'pue':                method.DEFAULT_PUE,
+        'price':              method.ELECTRICITY_PRICE_GBP_PER_KWH,
+        'uncertainty':        method.UNCERTAINTY_COMPONENTS,
+        'combined_uncertainty': round(method.combined_relative_uncertainty() * 100, 1),
+        'example':            example,
+        'models':             AIModel.objects.all().order_by('provider', 'model_name'),
+        'regions':            CarbonRegion.objects.all().order_by('carbon_intensity_kg_kwh'),
+        'hardware':           HardwareSpec.objects.all().order_by('manufacturer', 'name'),
+        'operations':         OperationType.objects.all().order_by('energy_mult'),
+        'precision':          PrecisionType.objects.all().order_by('energy_factor'),
+    })
+
+
+# ── Open data export ──────────────────────────────────────────────────────────
+# Field sets exported for each reference table. Keeping this declarative means
+# the data page, CSV export and JSON export all stay consistent automatically.
+DATA_TABLES = {
+    'regions': {
+        'label':  'Carbon intensity by region',
+        'model':  CarbonRegion,
+        'fields': ['region_name', 'region_code', 'country_code',
+                   'carbon_intensity_kg_kwh', 'year_recorded', 'source'],
+        'order':  'carbon_intensity_kg_kwh',
+    },
+    'hardware': {
+        'label':  'Hardware power specifications',
+        'model':  HardwareSpec,
+        'fields': ['name', 'manufacturer', 'hardware_type', 'tdp_watts',
+                   'fp16_tflops', 'int8_tflops', 'memory_gb',
+                   'embodied_co2_kg', 'released_year'],
+        'order':  'name',
+    },
+    'models': {
+        'label':  'AI model energy figures',
+        'model':  AIModel,
+        'fields': ['model_name', 'provider', 'wh_per_token', 'context_window',
+                   'params_billions', 'training_co2_kg', 'model_type', 'released_year'],
+        'order':  'model_name',
+    },
+    'operations': {
+        'label':  'Operation energy multipliers',
+        'model':  OperationType,
+        'fields': ['name', 'slug', 'energy_mult', 'description'],
+        'order':  'energy_mult',
+    },
+    'precision': {
+        'label':  'Numeric precision energy factors',
+        'model':  PrecisionType,
+        'fields': ['name', 'slug', 'energy_factor', 'description'],
+        'order':  'energy_factor',
+    },
+}
+
+
+def open_data(request):
+    """Landing page describing the open dataset, its licence and downloads."""
+    tables = [{'key': k, 'label': v['label'], 'count': v['model'].objects.count(),
+               'fields': v['fields']} for k, v in DATA_TABLES.items()]
+    return render(request, 'calculator/open_data.html', {'tables': tables})
+
+
+def data_download(request, table, fmt):
+    """
+    Streams a reference table as CSV or JSON. Open data, CC-BY-4.0 — citable and
+    reusable by researchers and other tools. No auth required by design.
+    """
+    spec = DATA_TABLES.get(table)
+    if spec is None:
+        return JsonResponse({'error': 'Unknown table'}, status=404)
+
+    rows = spec['model'].objects.all().order_by(spec['order'])
+    fields = spec['fields']
+
+    if fmt == 'json':
+        payload = {
+            'dataset':  spec['label'],
+            'source':   'AIECO — aieco.uk',
+            'licence':  'CC-BY-4.0',
+            'fields':   fields,
+            'records':  [{f: getattr(r, f) for f in fields} for r in rows],
+        }
+        resp = JsonResponse(payload, json_dumps_params={'indent': 2})
+        resp['Content-Disposition'] = f'attachment; filename="aieco_{table}.json"'
+        return resp
+
+    if fmt == 'csv':
+        resp = HttpResponse(content_type='text/csv')
+        resp['Content-Disposition'] = f'attachment; filename="aieco_{table}.csv"'
+        writer = csv.writer(resp)
+        writer.writerow(fields)
+        for r in rows:
+            writer.writerow([getattr(r, f) for f in fields])
+        return resp
+
+    return JsonResponse({'error': 'Format must be csv or json'}, status=400)
 
 
 # ── Authentication ────────────────────────────────────────────────────────────

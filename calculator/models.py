@@ -148,22 +148,39 @@ class PromptSession(models.Model):
 
 
 class PromptEmissions(models.Model):
-    session     = models.OneToOneField(PromptSession, on_delete=models.CASCADE,
-                    related_name='emissions')
-    token_count = models.IntegerField(default=0)
-    energy_wh   = models.FloatField(default=0)
-    co2_grams   = models.FloatField(default=0)
-    co2_mg      = models.FloatField(default=0)
+    session       = models.OneToOneField(PromptSession, on_delete=models.CASCADE,
+                      related_name='emissions')
+    token_count   = models.IntegerField(default=0, help_text="Total tokens (input + output)")
+    input_tokens  = models.IntegerField(default=0)
+    output_tokens = models.IntegerField(default=0, help_text="Estimated; output dominates energy")
+    pue           = models.FloatField(default=0, help_text="Data-centre overhead factor applied")
+    energy_wh     = models.FloatField(default=0)
+    co2_grams     = models.FloatField(default=0, help_text="Central estimate")
+    co2_grams_low = models.FloatField(default=0, help_text="Lower uncertainty bound")
+    co2_grams_high= models.FloatField(default=0, help_text="Upper uncertainty bound")
+    co2_mg        = models.FloatField(default=0)
 
     def save(self, *args, **kwargs):
-        session          = self.session
-        model            = session.ai_model
-        region           = session.region
-        word_count       = len(session.prompt_text.split())
-        self.token_count = int(word_count * 1.33)
-        self.energy_wh   = self.token_count * model.wh_per_token
-        self.co2_grams   = (self.energy_wh * region.carbon_intensity_kg_kwh) / 1000
-        self.co2_mg      = self.co2_grams * 1000
+        from .methodology import estimate_emissions
+        session    = self.session
+        model      = session.ai_model
+        region     = session.region
+        word_count = len(session.prompt_text.split())
+
+        r = estimate_emissions(
+            word_count               = word_count,
+            wh_per_token             = model.wh_per_token,
+            carbon_intensity_kg_kwh  = region.carbon_intensity_kg_kwh,
+        )
+        self.input_tokens   = r['input_tokens']
+        self.output_tokens  = r['output_tokens']
+        self.token_count    = r['total_tokens']
+        self.pue            = r['pue']
+        self.energy_wh      = r['energy_wh']
+        self.co2_grams      = r['co2_grams']
+        self.co2_grams_low  = r['co2_grams_low']
+        self.co2_grams_high = r['co2_grams_high']
+        self.co2_mg         = self.co2_grams * 1000
         super().save(*args, **kwargs)
 
 
