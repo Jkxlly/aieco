@@ -290,5 +290,16 @@ function hwCalculate() {
       '</div>'
     ) : '');
 }
+
+/* Live GPU/TPU counter — keep the badge in sync with the slider as it moves */
+(function() {
+  var slider = document.getElementById('hw-gpus');
+  var label  = document.getElementById('gpu-val');
+  if (slider && label) {
+    var sync = function() { label.textContent = slider.value; };
+    slider.addEventListener('input', sync);
+    sync();  /* set on page load to match the slider's starting value */
+  }
+})();
 </script>
 {% endblock %}
