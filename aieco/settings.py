@@ -6,7 +6,13 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-production')
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'aieco.uk', 'www.aieco.uk', '.onrender.com']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'aieco.uk', 'www.aieco.uk', '.onrender.com', '.up.railway.app', '.railway.app']
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://aieco.uk',
+    'https://www.aieco.uk',
+    'https://*.up.railway.app',
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
