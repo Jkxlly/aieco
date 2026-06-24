@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "python manage.py migrate --no-input && python manage.py seed_data && gunicorn aieco.wsgi --bind 0.0.0.0:$PORT",
+    "startCommand": "python manage.py migrate --no-input && (python manage.py seed_data || true) && gunicorn aieco.wsgi --bind 0.0.0.0:$PORT",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
   }

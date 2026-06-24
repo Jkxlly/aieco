@@ -57,7 +57,7 @@ class OperationType(models.Model):
 
 
 class PrecisionType(models.Model):
-    name        = models.CharField(max_length=20, unique=True)
+    name        = models.CharField(max_length=50, unique=True)
     slug        = models.CharField(max_length=10, unique=True)
     energy_factor = models.FloatField(default=1.0,
                     help_text="Energy factor vs FP32 baseline")
