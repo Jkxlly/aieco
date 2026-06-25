@@ -37,7 +37,7 @@ urlpatterns = [
     path('forum/new/',                views.forum_create,     name='forum_create'),
     path('forum/<int:pk>/',           views.forum_detail,     name='forum_detail'),
 
-    # EcoBot chat API — proxies to Anthropic Claude, keeps API key server-side
+    # EcoBot chat API — proxies to Google Gemini, keeps API key server-side
     path('api/chat/',                 views.chat_api,         name='chat_api'),
 
     # Hardware calculator API — runs the formula server-side so it is not
