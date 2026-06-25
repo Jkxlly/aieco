@@ -98,6 +98,10 @@ body {
   color: var(--text);
   transition: background 0.4s, color 0.3s;
   overflow-x: hidden;
+  /* Sticky footer: stack nav/main/footer vertically and let main grow so the
+     footer sits at the bottom even on short pages (forum, dashboard, etc.). */
+  display: flex;
+  flex-direction: column;
 }
 
 body::before {
@@ -303,7 +307,7 @@ footer {
 }
 footer .brand-text { font-size: 16px; font-weight: 900; display: block; margin-bottom: 8px; }
 
-main { position: relative; z-index: 1; }
+main { position: relative; z-index: 1; flex: 1 0 auto; }
 
 /* ── EcoBot ── */
 #ecobot-fab {
