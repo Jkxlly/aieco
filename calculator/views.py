@@ -11,6 +11,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
+from django.core.cache import cache
 from .models import (
     AIModel, CarbonRegion, HardwareSpec, OperationType,
     PrecisionType, PromptSession, PromptEmissions,
@@ -470,6 +471,43 @@ def forum_detail(request, pk):
 
 
 # ── EcoBot Chat API ───────────────────────────────────────────────────────────
+# Abuse controls for the public, unauthenticated Gemini proxy. Without these
+# anyone could hammer the endpoint and burn the API quota or use it as a free
+# LLM relay. The rate limit uses Django's cache; with the default per-process
+# cache it is approximate across multiple workers but still bounds abuse.
+CHAT_RATE_LIMIT      = 15     # max requests
+CHAT_RATE_WINDOW_SEC = 60     # per this many seconds, per client IP
+CHAT_MAX_MESSAGE_LEN = 4000   # reject prompts longer than this
+
+
+def _client_ip(request):
+    """Best-effort client IP, honouring the proxy header set by Render/Railway."""
+    forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', 'unknown')
+
+
+def _chat_rate_limited(request):
+    """Fixed-window per-IP counter; returns True once the limit is exceeded.
+
+    cache.add only writes when the key is absent, which starts a fresh window
+    and fixes its expiry; subsequent hits in that window use incr so the window
+    does not slide. incr raising means the key expired between calls — treat
+    that as the first hit of a new window.
+    """
+    key = f'chat_rate:{_client_ip(request)}'
+    if cache.add(key, 1, timeout=CHAT_RATE_WINDOW_SEC):
+        count = 1
+    else:
+        try:
+            count = cache.incr(key)
+        except ValueError:
+            cache.set(key, 1, timeout=CHAT_RATE_WINDOW_SEC)
+            count = 1
+    return count > CHAT_RATE_LIMIT
+
+
 @csrf_exempt
 @require_POST
 def chat_api(request):
@@ -480,12 +518,24 @@ def chat_api(request):
     Returns a JSON response with the assistant's reply.
     """
     try:
+        if _chat_rate_limited(request):
+            return JsonResponse({'reply': (
+                "You're sending messages a little fast — please wait a minute "
+                "and try again."
+            )}, status=429)
+
         body    = json.loads(request.body)
         message = body.get('message', '').strip()
         history = body.get('history', [])
 
         if not message:
             return JsonResponse({'error': 'No message provided'}, status=400)
+
+        if len(message) > CHAT_MAX_MESSAGE_LEN:
+            return JsonResponse({'reply': (
+                "That message is too long for EcoBot — please shorten it and "
+                "try again."
+            )}, status=400)
 
         api_key = os.environ.get('GEMINI_API_KEY', '')
 

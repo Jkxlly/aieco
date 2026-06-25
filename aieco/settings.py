@@ -5,7 +5,10 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-production')
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+# Secure by default: DEBUG is off unless explicitly enabled via the environment.
+# Local development sets DEBUG=True in .env (which is gitignored); production
+# hosts that set no DEBUG variable therefore run safely with DEBUG=False.
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'aieco.uk', 'www.aieco.uk', '.onrender.com', '.up.railway.app', '.railway.app']
 
 CSRF_TRUSTED_ORIGINS = [
