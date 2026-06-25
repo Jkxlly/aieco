@@ -39,4 +39,8 @@ urlpatterns = [
 
     # EcoBot chat API — proxies to Anthropic Claude, keeps API key server-side
     path('api/chat/',                 views.chat_api,         name='chat_api'),
+
+    # Hardware calculator API — runs the formula server-side so it is not
+    # exposed in browser JavaScript
+    path('api/hw-calculate/',         views.hw_calculate,     name='hw_calculate'),
 ]

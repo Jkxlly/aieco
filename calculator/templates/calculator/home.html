@@ -57,9 +57,7 @@
           <label class="field-label">AI Model</label>
           <select id="hw-model">
             {% for m in ai_models %}
-            <option value="{{ m.id }}"
-              data-wh="{{ m.wh_per_token }}"
-              data-provider="{{ m.provider }}">
+            <option value="{{ m.id }}">
               {{ m.model_name }} ({{ m.provider }})
             </option>
             {% endfor %}
@@ -71,7 +69,7 @@
           <label class="field-label">Operation Type</label>
           <select id="hw-op">
             {% for op in operations %}
-            <option value="{{ op.id }}" data-mult="{{ op.energy_mult }}">
+            <option value="{{ op.id }}">
               {{ op.name }} (x{{ op.energy_mult }})
             </option>
             {% endfor %}
@@ -83,7 +81,7 @@
           <label class="field-label">Hardware</label>
           <select id="hw-hardware">
             {% for h in hardware_list %}
-            <option value="{{ h.id }}" data-tdp="{{ h.tdp_watts }}" data-name="{{ h.name }}">
+            <option value="{{ h.id }}">
               {{ h.name }} ({{ h.tdp_watts }}W)
             </option>
             {% endfor %}
@@ -111,7 +109,7 @@
           <label class="field-label">Precision Format</label>
           <select id="hw-precision">
             {% for p in precision_types %}
-            <option value="{{ p.id }}" data-factor="{{ p.energy_factor }}">
+            <option value="{{ p.id }}">
               {{ p.name }}
             </option>
             {% endfor %}
@@ -130,9 +128,7 @@
           <label class="field-label">Region</label>
           <select id="hw-region">
             {% for r in regions %}
-            <option value="{{ r.id }}"
-              data-ci="{{ r.carbon_intensity_kg_kwh }}"
-              data-name="{{ r.region_name }}">
+            <option value="{{ r.id }}">
               {{ r.region_name }} ({{ r.carbon_intensity_kg_kwh }} kg/kWh)
             </option>
             {% endfor %}
@@ -203,82 +199,79 @@
 
 {% block extra_js %}
 <script>
-/* hwCalculate — reads input values, runs energy/carbon formula, renders results panel
-   Formula: energy_kwh = (TDP x GPUs x op_mult x prec_factor x PUE x hours) / 1000
-   All input values come from data attributes embedded by Django template engine at page load */
+/* hwCalculate — sends the selected options to the server, which runs the
+   energy/carbon formula and returns finished figures. The formula and its
+   constants live only in the Django view (calculator/views.py), never in
+   this page, so the algorithm is not exposed in the browser. */
 function hwCalculate() {
-  var modelSel   = document.getElementById('hw-model');
-  var opSel      = document.getElementById('hw-op');
-  var hwSel      = document.getElementById('hw-hardware');
-  var gpus       = parseFloat(document.getElementById('hw-gpus').value) || 1;
-  var precSel    = document.getElementById('hw-precision');
-  var hours      = parseFloat(document.getElementById('hw-hours').value) || 1;
-  var regionSel  = document.getElementById('hw-region');
+  var gpus  = parseFloat(document.getElementById('hw-gpus').value) || 1;
+  var hours = parseFloat(document.getElementById('hw-hours').value) || 1;
 
-/* Read reference values from data attributes — set by Django template */
-  var tdp        = parseFloat(hwSel.selectedOptions[0].dataset.tdp   || 0);
-  var opMult     = parseFloat(opSel.selectedOptions[0].dataset.mult  || 1);
-  var precFactor = parseFloat(precSel.selectedOptions[0].dataset.factor || 1);
-  var ci         = parseFloat(regionSel.selectedOptions[0].dataset.ci || 0);
-  var regionName = regionSel.selectedOptions[0].dataset.name || '';
-  var hwName     = hwSel.selectedOptions[0].dataset.name || '';
+  var payload = {
+    hardware_id:  document.getElementById('hw-hardware').value,
+    operation_id: document.getElementById('hw-op').value,
+    precision_id: document.getElementById('hw-precision').value,
+    region_id:    document.getElementById('hw-region').value,
+    gpus:         gpus,
+    hours:        hours
+  };
 
-  /* PUE = 1.4 (IEA global average data centre overhead) */
-  var PUE       = 1.4;
-  var energyKwh = (tdp * gpus * opMult * precFactor * PUE * hours) / 1000;
-  var co2Kg     = energyKwh * ci;
-  var co2g      = co2Kg * 1000;
-  var costGbp   = energyKwh * 0.28; /* Ofgem 2024 UK average unit rate */
-
-  /* Real-world equivalents using published constants */
-  var carKm    = (co2Kg / 0.21).toFixed(1);              /* DEFRA 2024 */
-  var phones   = Math.round((energyKwh * 1000) / 8.22);  /* Average Li-ion battery */
-  var flights  = (co2Kg / 990).toFixed(4);               /* ICAO LHR-JFK return */
-  var trees    = (co2Kg / 21).toFixed(2);                /* Nowak & Crane 2002 */
-  var homeDays = (energyKwh / 10.7).toFixed(1);          /* Ofgem household average */
-  var searches = Math.round(co2Kg / 0.0002);             /* Google Environmental Report 2023 */
-
-  /* Recommendations based on current selection */
-  var recs = [];
-  if (ci > 0.3)          recs.push('Switch to a lower-carbon region (France or Norway) to cut emissions by up to 16x');
-  if (precFactor > 0.35) recs.push('Use INT8 precision — reduces energy by approximately 65% with minimal quality loss');
-  if (!hwName.includes('H100')) recs.push('Consider NVIDIA H100 SXM5 — approximately 71% lower operational carbon vs V100');
-  if (opMult >= 3.2)     recs.push('Training is 3.2x more energy intensive than inference — consider pre-trained models');
-
-  /* Update subtitle with current configuration */
   var subtitle = document.getElementById('results-subtitle');
-  if (subtitle) subtitle.textContent = hwName + ' x ' + gpus + ' · ' + hours + 'h · ' + regionName;
+  if (subtitle) subtitle.textContent = 'Calculating…';
 
-  /* Render results into the results panel */
+  fetch("{% url 'hw_calculate' %}", {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(payload)
+  })
+  .then(function(resp) {
+    if (!resp.ok) throw new Error('Calculation failed');
+    return resp.json();
+  })
+  .then(function(d) { renderResults(d, gpus, hours); })
+  .catch(function() {
+    if (subtitle) subtitle.textContent = 'Could not calculate — please try again';
+  });
+}
+
+/* renderResults — paints the figures returned by the server into the panel.
+   Pure presentation: number formatting only, no calculation. */
+function renderResults(d, gpus, hours) {
+  var e   = d.equivalents || {};
+  var recs = d.recommendations || [];
+
+  var subtitle = document.getElementById('results-subtitle');
+  if (subtitle) subtitle.textContent = d.subtitle || '';
+
   document.getElementById('results-body').innerHTML =
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">' +
       '<div class="metric-card" style="background:var(--card-pink);">' +
         '<div class="metric-label">Energy</div>' +
-        '<div class="metric-value" style="font-size:20px;">' + energyKwh.toFixed(2) + '</div>' +
+        '<div class="metric-value" style="font-size:20px;">' + d.energy_kwh.toFixed(2) + '</div>' +
         '<div class="metric-sub">kWh total</div>' +
       '</div>' +
       '<div class="metric-card" style="background:var(--card-green);">' +
         '<div class="metric-label">CO2e</div>' +
         '<div class="metric-value" style="font-size:20px;color:var(--accent);">' +
-          (co2g < 1000 ? co2g.toFixed(2) + 'g' : co2Kg.toFixed(2) + 'kg') +
+          (d.co2_g < 1000 ? d.co2_g.toFixed(2) + 'g' : d.co2_kg.toFixed(2) + 'kg') +
         '</div>' +
-        '<div class="metric-sub">' + co2Kg.toFixed(3) + ' kg</div>' +
+        '<div class="metric-sub">' + d.co2_kg.toFixed(3) + ' kg</div>' +
       '</div>' +
       '<div class="metric-card" style="background:var(--card-blue);">' +
         '<div class="metric-label">Cost</div>' +
-        '<div class="metric-value" style="font-size:20px;">£' + costGbp.toFixed(2) + '</div>' +
+        '<div class="metric-value" style="font-size:20px;">£' + d.cost_gbp.toFixed(2) + '</div>' +
         '<div class="metric-sub">at £0.28/kWh</div>' +
       '</div>' +
     '</div>' +
 
     '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;">Real-world equivalents</div>' +
     '<div class="equiv-grid" style="margin-bottom:16px;">' +
-      '<div class="equiv-tile"><div class="equiv-icon">Car</div><div class="equiv-val">' + carKm + ' km</div><div class="equiv-lbl">Petrol car</div></div>' +
-      '<div class="equiv-tile"><div class="equiv-icon">Phone</div><div class="equiv-val">' + phones.toLocaleString() + '</div><div class="equiv-lbl">Phone charges</div></div>' +
-      '<div class="equiv-tile"><div class="equiv-icon">Flight</div><div class="equiv-val">' + flights + '</div><div class="equiv-lbl">LHR to JFK flights</div></div>' +
-      '<div class="equiv-tile"><div class="equiv-icon">Tree</div><div class="equiv-val">' + trees + ' yrs</div><div class="equiv-lbl">Tree absorption</div></div>' +
-      '<div class="equiv-tile"><div class="equiv-icon">Home</div><div class="equiv-val">' + homeDays + ' days</div><div class="equiv-lbl">UK home electricity</div></div>' +
-      '<div class="equiv-tile"><div class="equiv-icon">Search</div><div class="equiv-val">' + searches.toLocaleString() + '</div><div class="equiv-lbl">Google searches</div></div>' +
+      '<div class="equiv-tile"><div class="equiv-icon">Car</div><div class="equiv-val">' + e.car_km.toFixed(1) + ' km</div><div class="equiv-lbl">Petrol car</div></div>' +
+      '<div class="equiv-tile"><div class="equiv-icon">Phone</div><div class="equiv-val">' + e.phones.toLocaleString() + '</div><div class="equiv-lbl">Phone charges</div></div>' +
+      '<div class="equiv-tile"><div class="equiv-icon">Flight</div><div class="equiv-val">' + e.flights.toFixed(4) + '</div><div class="equiv-lbl">LHR to JFK flights</div></div>' +
+      '<div class="equiv-tile"><div class="equiv-icon">Tree</div><div class="equiv-val">' + e.trees.toFixed(2) + ' yrs</div><div class="equiv-lbl">Tree absorption</div></div>' +
+      '<div class="equiv-tile"><div class="equiv-icon">Home</div><div class="equiv-val">' + e.home_days.toFixed(1) + ' days</div><div class="equiv-lbl">UK home electricity</div></div>' +
+      '<div class="equiv-tile"><div class="equiv-icon">Search</div><div class="equiv-val">' + e.searches.toLocaleString() + '</div><div class="equiv-lbl">Google searches</div></div>' +
     '</div>' +
 
     (recs.length ? (

@@ -41,6 +41,98 @@ def home(request):
     })
 
 
+# ── Hardware calculator API ─────────────────────────────────────────────────
+# The hardware calculator's formula and constants used to live in browser
+# JavaScript (home.html), which exposed the whole algorithm to anyone viewing
+# source. The computation now runs here, server-side: the browser sends only
+# the selected row ids, this view looks the reference values up from the
+# database and returns finished numbers. The formula never reaches the client.
+
+# Constants specific to the hardware calculator. Kept here (not in the template)
+# so they are not shipped to the browser.
+HW_PUE = 1.4  # IEA global-average data-centre overhead for the hardware model
+
+# Real-world equivalence factors (kg CO2 or kWh per unit) with their sources.
+EQUIV_CO2_PER_CAR_KM   = 0.21      # DEFRA 2024, petrol car
+WH_PER_PHONE_CHARGE    = 8.22      # average Li-ion phone battery
+CO2_PER_FLIGHT_KG      = 990.0     # ICAO, LHR–JFK return
+CO2_PER_TREE_YEAR_KG   = 21.0      # Nowak & Crane 2002
+KWH_PER_HOME_DAY       = 10.7      # Ofgem household average
+CO2_PER_SEARCH_KG      = 0.0002    # Google Environmental Report 2023
+
+
+@require_POST
+@csrf_exempt
+def hw_calculate(request):
+    """
+    Server-side hardware energy/carbon calculation.
+
+    Accepts a JSON body of selected row ids plus the GPU count and duration,
+    resolves the reference values from the database, runs the energy → CO2 →
+    cost pipeline in Python and returns the finished figures. Read-only: no
+    database writes and no auth, so csrf_exempt is safe here.
+    """
+    try:
+        body = json.loads(request.body or '{}')
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Invalid request body'}, status=400)
+
+    try:
+        hardware  = get_object_or_404(HardwareSpec,   pk=body.get('hardware_id'))
+        operation = get_object_or_404(OperationType,  pk=body.get('operation_id'))
+        precision = get_object_or_404(PrecisionType,  pk=body.get('precision_id'))
+        region    = get_object_or_404(CarbonRegion,   pk=body.get('region_id'))
+    except Exception:
+        return JsonResponse({'error': 'Unknown selection'}, status=400)
+
+    # Clamp user-controlled numerics to the same ranges the UI allows.
+    try:
+        gpus  = max(1, min(512, int(float(body.get('gpus', 1)))))
+        hours = max(0.1, float(body.get('hours', 1)))
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Invalid GPU count or duration'}, status=400)
+
+    tdp         = float(hardware.tdp_watts)
+    op_mult     = float(operation.energy_mult)
+    prec_factor = float(precision.energy_factor)
+    ci          = float(region.carbon_intensity_kg_kwh)
+
+    # energy_kwh = (TDP × GPUs × op multiplier × precision factor × PUE × hours) / 1000
+    energy_kwh = (tdp * gpus * op_mult * prec_factor * HW_PUE * hours) / 1000.0
+    co2_kg     = energy_kwh * ci
+    co2_g      = co2_kg * 1000.0
+    cost_gbp   = energy_kwh * method.ELECTRICITY_PRICE_GBP_PER_KWH
+
+    equivalents = {
+        'car_km':    co2_kg / EQUIV_CO2_PER_CAR_KM,
+        'phones':    round((energy_kwh * 1000) / WH_PER_PHONE_CHARGE),
+        'flights':   co2_kg / CO2_PER_FLIGHT_KG,
+        'trees':     co2_kg / CO2_PER_TREE_YEAR_KG,
+        'home_days': energy_kwh / KWH_PER_HOME_DAY,
+        'searches':  round(co2_kg / CO2_PER_SEARCH_KG),
+    }
+
+    recommendations = []
+    if ci > 0.3:
+        recommendations.append('Switch to a lower-carbon region (France or Norway) to cut emissions by up to 16x')
+    if prec_factor > 0.35:
+        recommendations.append('Use INT8 precision — reduces energy by approximately 65% with minimal quality loss')
+    if 'H100' not in hardware.name:
+        recommendations.append('Consider NVIDIA H100 SXM5 — approximately 71% lower operational carbon vs V100')
+    if op_mult >= 3.2:
+        recommendations.append('Training is 3.2x more energy intensive than inference — consider pre-trained models')
+
+    return JsonResponse({
+        'energy_kwh':      energy_kwh,
+        'co2_kg':          co2_kg,
+        'co2_g':           co2_g,
+        'cost_gbp':        cost_gbp,
+        'equivalents':     equivalents,
+        'recommendations': recommendations,
+        'subtitle':        f'{hardware.name} x {gpus} · {hours}h · {region.region_name}',
+    })
+
+
 # ── Methodology ─────────────────────────────────────────────────────────────
 def methodology_view(request):
     """
